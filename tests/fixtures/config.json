@@ -1,0 +1,21 @@
+{
+  "base_url": "https://example.com",
+  "list_page_url": "/list",
+  "min_delay": 0.0,
+  "max_delay": 0.0,
+  "jitter": 0.0,
+  "hourly_limit": 1000,
+  "daily_limit": 10000,
+  "max_session_duration": 7200,
+  "break_duration_min": 0,
+  "break_duration_max": 1,
+  "quiet_hours": [],
+  "output_format": "json",
+  "output_path": "output/test_fixtures.json",
+  "incremental_save": false,
+  "save_interval": 5,
+  "captcha_solver": "manual",
+  "captcha_api_key": null,
+  "browser_engine": "playwright",
+  "headless": true
+}

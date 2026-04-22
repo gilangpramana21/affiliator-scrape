@@ -1,0 +1,12 @@
+{
+  "cookies": [
+    {
+      "name": "sessionid",
+      "value": "REPLACE_WITH_REAL_VALUE",
+      "domain": ".tokopedia.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true
+    }
+  ]
+}

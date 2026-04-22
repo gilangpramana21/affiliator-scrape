@@ -1,0 +1,196 @@
+{
+  "list_page": {
+    "affiliator_cards": [
+      "table tbody tr:not(:first-child)",
+      "tr[data-testid*='creator']",
+      "tr.creator-row",
+      "div[class*='card']",
+      "div.creator-card",
+      "div[data-testid='creator-card']",
+      "div.affiliate-creator-item",
+      "li.creator-list-item",
+      "div.creator-item"
+    ],
+    "username": [
+      "td:nth-child(1) a",
+      "td:nth-child(1)",
+      "td.username-cell",
+      "td[data-testid*='username']",
+      ".creator-name",
+      "div.creator-name > span.username",
+      "span[data-testid='creator-username']",
+      "div.profile-header h2",
+      "a.creator-link span.name",
+      "div.creator-info h3"
+    ],
+    "kategori": [
+      "span.creator-category",
+      "div[data-testid='creator-category']",
+      "span.category-label",
+      "div.creator-meta span.category"
+    ],
+    "pengikut": [
+      "span.follower-count",
+      "div[data-metric='followers'] span.count",
+      "span[data-testid='follower-count']",
+      "div.creator-stats span.followers",
+      "span.pengikut-count"
+    ],
+    "gmv": [
+      "td:nth-child(3)",
+      "td[data-testid*='gmv']",
+      "span.gmv-value",
+      "div[data-metric='gmv'] span.value",
+      "span[data-testid='gmv-value']",
+      "div.creator-stats span.gmv",
+      "span.total-gmv"
+    ],
+    "produk_terjual": [
+      "td:nth-child(4)",
+      "td[data-testid*='produk']",
+      "span.product-sold-count",
+      "div[data-metric='products-sold'] span.count",
+      "span[data-testid='products-sold']",
+      "div.creator-stats span.produk-terjual",
+      "span.sold-count"
+    ],
+    "rata_rata_tayangan": [
+      "td:nth-child(5)",
+      "td[data-testid*='tayangan']",
+      "span.avg-view-count",
+      "div[data-metric='avg-views'] span.count",
+      "span[data-testid='avg-views']",
+      "div.creator-stats span.tayangan",
+      "span.average-views"
+    ],
+    "tingkat_interaksi": [
+      "td:nth-child(6)",
+      "td[data-testid*='interaksi']",
+      "span.engagement-rate",
+      "div[data-metric='engagement'] span.rate",
+      "span[data-testid='engagement-rate']",
+      "div.creator-stats span.interaksi",
+      "span.interaction-rate"
+    ],
+    "gmv_per_pembeli": [
+      "span.gmv-per-buyer",
+      "div[data-metric='gmv-per-buyer'] span.value",
+      "span[data-testid='gmv-per-buyer']"
+    ],
+    "gmv_harian": [
+      "span.gmv-daily",
+      "div[data-period='daily'] span.gmv",
+      "span[data-testid='gmv-daily']"
+    ],
+    "gmv_mingguan": [
+      "span.gmv-weekly",
+      "div[data-period='weekly'] span.gmv",
+      "span[data-testid='gmv-weekly']"
+    ],
+    "gmv_bulanan": [
+      "span.gmv-monthly",
+      "div[data-period='monthly'] span.gmv",
+      "span[data-testid='gmv-monthly']"
+    ],
+    "detail_url": [
+      "td:nth-child(1) a",
+      "a[href*='creator']",
+      "a[href*='profile']",
+      "a.creator-card-link",
+      "a[data-testid='creator-detail-link']",
+      "div.creator-card > a",
+      "a.creator-profile-link",
+      "a.view-detail"
+    ]
+  },
+  "detail_page": {
+    "username": [
+      "h1.profile-username",
+      "span[data-testid='profile-username']",
+      "div.profile-header h1",
+      "div.creator-profile h2.username",
+      "h1.creator-name"
+    ],
+    "kategori": [
+      "span.profile-category",
+      "div[data-testid='profile-category']",
+      "div.profile-info span.category",
+      "span.creator-category-detail"
+    ],
+    "pengikut": [
+      "span.profile-follower-count",
+      "div[data-metric='followers'] span.count",
+      "span[data-testid='profile-followers']",
+      "div.profile-stats span.followers",
+      "span.follower-number"
+    ],
+    "gmv": [
+      "span.profile-gmv",
+      "div[data-metric='gmv'] span.value",
+      "span[data-testid='profile-gmv']",
+      "div.profile-stats span.gmv-value"
+    ],
+    "produk_terjual": [
+      "span.profile-products-sold",
+      "div[data-metric='products-sold'] span.count",
+      "span[data-testid='profile-products-sold']",
+      "div.profile-stats span.products-sold"
+    ],
+    "rata_rata_tayangan": [
+      "span.profile-avg-views",
+      "div[data-metric='avg-views'] span.count",
+      "span[data-testid='profile-avg-views']",
+      "div.profile-stats span.avg-views"
+    ],
+    "tingkat_interaksi": [
+      "span.profile-engagement-rate",
+      "div[data-metric='engagement'] span.rate",
+      "span[data-testid='profile-engagement']",
+      "div.profile-stats span.engagement-rate"
+    ],
+    "nomor_kontak": [
+      "span.contact-number",
+      "div[data-testid='contact-number']",
+      "a[href^='tel:']",
+      "span.phone-number",
+      "div.contact-info span.nomor-kontak",
+      "span[data-testid='phone-number']"
+    ],
+    "nomor_whatsapp": [
+      "a[href*='wa.me']",
+      "a[href*='whatsapp']",
+      "span.whatsapp-number",
+      "div[data-testid='whatsapp-number']"
+    ],
+    "gmv_per_pembeli": [
+      "span.profile-gmv-per-buyer",
+      "div[data-metric='gmv-per-buyer'] span.value",
+      "span[data-testid='profile-gmv-per-buyer']"
+    ],
+    "gmv_harian": [
+      "span.profile-gmv-daily",
+      "div[data-period='daily'] span.gmv",
+      "span[data-testid='profile-gmv-daily']"
+    ],
+    "gmv_mingguan": [
+      "span.profile-gmv-weekly",
+      "div[data-period='weekly'] span.gmv",
+      "span[data-testid='profile-gmv-weekly']"
+    ],
+    "gmv_bulanan": [
+      "span.profile-gmv-monthly",
+      "div[data-period='monthly'] span.gmv",
+      "span[data-testid='profile-gmv-monthly']"
+    ]
+  },
+  "pagination": {
+    "next_page_url": [
+      "a[rel='next']",
+      "a[data-testid='pagination-next']",
+      "li.pagination-next a",
+      "a.next-page",
+      "button[aria-label='Next page']",
+      "a[aria-label='Next']"
+    ]
+  }
+}

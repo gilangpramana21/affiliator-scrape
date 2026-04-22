@@ -1,0 +1,76 @@
+{
+  "cookies": [
+    {
+      "name": "sessionid",
+      "value": "16a6a727b058bd19f7aaa148541963f1",
+      "domain": ".tokopedia.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": false
+    },
+    {
+      "name": "sessionid_ss",
+      "value": "16a6a727b058bd19f7aaa148541963f1",
+      "domain": ".tokopedia.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true
+    },
+    {
+      "name": "sid_ucp_v1",
+      "value": "1.0.1-KGViYTAyMjY4ZmY2NWIxMGY3N2UwYmQxZjBlYzNmOTY5Y2Y5ODY3YTkKHAiCiJKmv-nt42QQ6bqezwYY5B8gDDgCQPEHSAQQAxoCbXkiIDE2YTZhNzI3YjA1OGJkMTlmN2FhYTE0ODU0MTk2M2YxMk4KIH4HNFAly5r4hk6A4jgFOtL5pqcC5s2KHZc1_SwXhPVFEiCAWOfK1aMZ3sHZVSBAJjQbMAx8mPOA6C0-xlYRmIXqvBgEIgZ0aWt0b2s",
+      "domain": ".tokopedia.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true
+    },
+    {
+      "name": "sid_ucp_sso_v1",
+      "value": "1.0.1-KGIxOWJlZWUzNTAzNzAwZTg3MzgzOWRlYWYyZmMzNGRlMGNkZjg5MWMKIgiCiJKmv-nt42QQpZGYzwYY5B8gDDDg7p6mBjgCQPEHSAYQAxoCbXkiIGRkNWZmYmE0ODM5ZWRlOTlhZTg2MTI1MzdmZmUxZWVhMk4KIEXtVk7cgBqpZPAA82tOy6SBvnLExldZYXvSEy2hodKnEiCK4ApYK6gpFqk-gF7FvExJMJ0a16sQ3oIhLP8f1Fm4lRgFIgZ0aWt0b2s",
+      "domain": ".tokopedia.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true
+    },
+    {
+      "name": "UNIFIED_SELLER_TOKEN",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOjcyNjE5NzQ0NjEwMTUxNjM5MDYsIkdsb2JhbFNlbGxlck1hcCI6eyI3NDk1MTc3MTczMzk5OTk3MjU5Ijp7IlNlbGxlcnMiOlt7IlNlbGxlcklEIjo3NDk1MTc3MTczMzk5OTk3MjU5LCJJTVNob3BJRCI6NzI2MTk3NDYwNzUwMTA1MDExOCwiSU1DdXN0b21lclNlcnZpY2VJRCI6NzI2MTk3NDU5NTE3MzkyNTEyNSwiU2hvcFJlZ2lvbiI6IklEIiwiSXNBY3Jvc3MiOmZhbHNlfV19fSwiZXhwIjoxNzc2ODczMTM3LCJuYmYiOjE3NzY3ODU3Mzd9.RU4WvuRiQmvAHBAoIKfMFxu32eSAkSIW5enyyoE8alI",
+      "domain": ".tokopedia.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true
+    },
+    {
+      "name": "SELLER_TOKEN",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOjcyNjE5NzQ0NjEwMTUxNjM5MDYsIk9lY1VpZCI6NzQ5NTE3NzE3MzM5OTk5NzI1OSwiT2VjU2hvcElkIjo3NDk1MTc3MTczMzk5OTk3MjU5LCJTaG9wUmVnaW9uIjoiIiwiR2xvYmFsU2VsbGVySWQiOjc0OTUxNzcxNzMzOTk5OTcyNTksIlNlbGxlcklkIjo3NDk1MTc3MTczMzk5OTk3MjU5LCJleHAiOjE3NzY4NzMxMzcsIm5iZiI6MTc3Njc4NTczN30.m8GGc_tNf0pihouf7eFdRn0ugY_XQRxT49a7ZAx5178",
+      "domain": ".tokopedia.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true
+    },
+    {
+      "name": "passport_csrf_token",
+      "value": "8f82d3e04c391f304b76cbc9653e89b0",
+      "domain": ".tokopedia.com",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true
+    },
+    {
+      "name": "uid_tt",
+      "value": "426e15197ca3cef5ad169e907f9c99ef45bc43352b6b0b5c94e453ab43a463e4",
+      "domain": ".tokopedia.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": false
+    },
+    {
+      "name": "ttwid",
+      "value": "1%7CYtIR9YC0HUxh-l7bKAiNF0VribPDdyH9fOHiTS2KxU8%7C1776793836%7Cd0f9bab815b6bbabb6381118dfdad3688a1ffabdd15405e52640e010460a1a5c",
+      "domain": ".tokopedia.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true
+    }
+  ]
+}

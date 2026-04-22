@@ -1,0 +1,48 @@
+{
+  "base_url": "https://affiliate-id.tokopedia.com",
+  "list_page_url": "/connection/creator-management",
+  "list_page_query": "?view_blocked_creator=&shop_region=ID&shop_id=7495177173399997259",
+
+  "min_delay": 5.0,
+  "max_delay": 12.0,
+  "jitter": 0.4,
+
+  "hourly_limit": 20,
+  "daily_limit": 120,
+  "max_session_duration": 3000,
+  "break_duration_min": 1800,
+  "break_duration_max": 3000,
+  "quiet_hours": [[0, 7]],
+
+  "request_timeout": 45,
+  "max_retries": 2,
+  "max_redirects": 5,
+
+  "browser_engine": "playwright",
+  "headless": true,
+  "use_stealth": true,
+
+  "proxies": [],
+  "proxy_rotation_strategy": "per_session",
+  "proxy_rotation_interval": 10,
+
+  "captcha_solver": "manual",
+  "captcha_api_key": null,
+
+  "output_format": "xlsx",
+  "output_path": "output/affiliators.safe.xlsx",
+  "incremental_save": true,
+  "save_interval": 5,
+  "cookie_file": "config/cookies.json",
+  "require_cookie_file": true,
+  "max_pages_per_run": 15,
+  "max_errors_before_stop": 6,
+  "max_captchas_before_stop": 2,
+
+  "log_level": "INFO",
+  "log_file": "logs/scraper.safe.log",
+
+  "distributed": false,
+  "redis_url": null,
+  "instance_id": null
+}

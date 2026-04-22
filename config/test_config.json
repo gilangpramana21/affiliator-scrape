@@ -1,0 +1,48 @@
+{
+  "base_url": "https://httpbin.org",
+  "list_page_url": "/get",
+  "list_page_query": "",
+  
+  "min_delay": 1.0,
+  "max_delay": 2.0,
+  "jitter": 0.2,
+  
+  "hourly_limit": 10,
+  "daily_limit": 50,
+  "max_session_duration": 300,
+  "break_duration_min": 60,
+  "break_duration_max": 120,
+  "quiet_hours": [],
+  
+  "request_timeout": 10,
+  "max_retries": 2,
+  "max_redirects": 3,
+  
+  "browser_engine": "playwright",
+  "headless": true,
+  "use_stealth": true,
+  
+  "proxies": [],
+  "proxy_rotation_strategy": "per_session",
+  "proxy_rotation_interval": 5,
+  
+  "captcha_solver": "manual",
+  "captcha_api_key": null,
+  
+  "output_format": "json",
+  "output_path": "output/test_results.json",
+  "incremental_save": true,
+  "save_interval": 1,
+  "cookie_file": "",
+  "require_cookie_file": false,
+  "max_pages_per_run": 1,
+  "max_errors_before_stop": 5,
+  "max_captchas_before_stop": 1,
+  
+  "log_level": "INFO",
+  "log_file": "logs/test_scraper.log",
+  
+  "distributed": false,
+  "redis_url": null,
+  "instance_id": null
+}
