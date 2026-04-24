@@ -360,12 +360,15 @@ class AffiliatorExtractor:
     def parse_numeric(value: Optional[str]) -> Optional[float]:
         """Parse a formatted numeric string to a float.
 
-        Handles:
+        Handles Indonesian format:
         - Plain integers: "1234" → 1234.0
         - Comma-separated thousands: "1,234" → 1234.0
         - K suffix (thousands): "1.2K" → 1200.0
+        - rb suffix (thousands): "1.2 rb" → 1200.0
+        - jt suffix (millions): "1.5 jt" → 1500000.0
         - M suffix (millions): "1.5M" → 1500000.0
         - B suffix (billions): "2.3B" → 2300000000.0
+        - JT+ format: "1JT+" → 1000000.0
         - Percentage: "4.5%" → 4.5
         - "N/A", empty, None → None
 
@@ -388,15 +391,26 @@ class AffiliatorExtractor:
         # Remove currency symbols and whitespace
         text = re.sub(r"[Rp\s]", "", text)
 
-        # Identify suffix
-        suffix_multipliers = {"K": 1_000, "M": 1_000_000, "B": 1_000_000_000}
-        multiplier = 1
-        upper = text.upper()
-        for suffix, mult in suffix_multipliers.items():
-            if upper.endswith(suffix):
-                text = text[:-1]
-                multiplier = mult
-                break
+        # Handle JT+ format
+        if "JT+" in text.upper():
+            text = text.upper().replace("JT+", "")
+            multiplier = 1_000_000
+        else:
+            # Identify suffix
+            suffix_multipliers = {
+                "K": 1_000, 
+                "RB": 1_000,
+                "JT": 1_000_000,
+                "M": 1_000_000, 
+                "B": 1_000_000_000
+            }
+            multiplier = 1
+            upper = text.upper()
+            for suffix, mult in suffix_multipliers.items():
+                if upper.endswith(suffix):
+                    text = text[:-len(suffix)].strip()
+                    multiplier = mult
+                    break
 
         # Remove commas used as thousand separators
         text = text.replace(",", "")

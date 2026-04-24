@@ -282,9 +282,26 @@ Tokopedia Affiliate Scraper adalah program web scraper yang mengambil data affil
 2. THE Scraper SHALL support manual CAPTCHA solving: pause execution and wait for user input
 3. THE Scraper SHALL support automatic CAPTCHA solving via 2Captcha or Anti-Captcha service integration (configurable)
 4. WHEN CAPTCHA solving fails after 3 attempts, THE Scraper SHALL skip the current page and continue with the next
-5. THE Scraper SHALL detect common CAPTCHA types: reCAPTCHA v2, reCAPTCHA v3, hCaptcha, image CAPTCHA
+5. THE Scraper SHALL detect common CAPTCHA types: reCAPTCHA v2, reCAPTCHA v3, hCaptcha, image CAPTCHA, Tokopedia custom puzzle CAPTCHA
 6. WHEN a CAPTCHA is solved successfully, THE Scraper SHALL save the session cookies for reuse
 7. THE Scraper SHALL implement exponential backoff after CAPTCHA encounters (wait longer before next request)
+
+### Requirement 27: Tokopedia Custom CAPTCHA Puzzle Handling
+
+**User Story:** As a developer, I want to handle Tokopedia's custom puzzle CAPTCHA that appears on affiliator detail pages, so that scraping can continue automatically without manual intervention.
+
+#### Acceptance Criteria
+
+1. WHEN navigating to an affiliator detail page in a new tab, THE Scraper SHALL detect if a Tokopedia custom puzzle CAPTCHA is present
+2. WHEN a Tokopedia puzzle CAPTCHA is detected, THE Scraper SHALL automatically refresh the page once to bypass the puzzle
+3. AFTER refreshing the page, THE Scraper SHALL verify that the actual profile data is now visible and the puzzle has disappeared
+4. WHEN the puzzle persists after one refresh, THE Scraper SHALL attempt up to 2 additional refreshes before marking the page as failed
+5. THE Scraper SHALL distinguish Tokopedia's custom puzzle CAPTCHA from standard CAPTCHAs (reCAPTCHA, hCaptcha) by detecting puzzle-specific elements or page patterns
+6. WHEN opening detail pages, THE Scraper SHALL open them in new tabs to mimic natural user behavior that triggers the puzzle pattern
+7. THE Scraper SHALL implement a wait period of 2-3 seconds after page load before checking for puzzle presence to allow dynamic content to render
+8. WHEN a puzzle is successfully bypassed, THE Scraper SHALL log the successful bypass and continue with data extraction
+9. THE Scraper SHALL track puzzle encounter rate and log warnings if the rate exceeds 50% to indicate potential detection
+10. WHEN multiple consecutive pages show puzzles (5+ in a row), THE Scraper SHALL pause for 5-10 minutes before continuing to avoid triggering enhanced anti-bot measures
 
 ### Requirement 21: Behavioral Biometrics Simulation
 

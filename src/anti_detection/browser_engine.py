@@ -257,6 +257,11 @@ class BrowserEngine:
         if isinstance(cookies, list) and cookies:
             await self._context.add_cookies(cookies)
 
+    @property
+    def context(self) -> Optional[BrowserContext]:
+        """Get the browser context for creating new pages/tabs."""
+        return self._context
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------

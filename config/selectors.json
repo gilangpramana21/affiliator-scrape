@@ -1,67 +1,71 @@
 {
   "list_page": {
     "affiliator_cards": [
-      "table tbody tr:not(:first-child)",
-      "tr[data-testid*='creator']",
-      "tr.creator-row",
+      "tr:not(:first-child)",
+      "tbody tr",
+      "table tr:not(:first-child)",
+      "div[role='row']",
+      "div[class*='row']",
+      "div[class*='item']",
       "div[class*='card']",
-      "div.creator-card",
-      "div[data-testid='creator-card']",
-      "div.affiliate-creator-item",
-      "li.creator-list-item",
-      "div.creator-item"
+      "li",
+      "tr[data-testid*='creator']",
+      "div.creator-card"
     ],
     "username": [
-      "td:nth-child(1) a",
+      "span.arco-table-cell-wrap-value",
+      "span.text-body-m-medium.text-neutral-text1.text-overflow-single",
+      "span[class*='text-body-m-medium'][class*='text-neutral-text1'][class*='text-overflow-single']",
+      "span.text-overflow-single",
+      "td:nth-child(2) span.text-body-m-medium",
+      "span[class*='text-overflow']",
       "td:nth-child(1)",
-      "td.username-cell",
-      "td[data-testid*='username']",
-      ".creator-name",
-      "div.creator-name > span.username",
-      "span[data-testid='creator-username']",
-      "div.profile-header h2",
-      "a.creator-link span.name",
-      "div.creator-info h3"
+      "div:first-child span"
     ],
     "kategori": [
+      "span.arco-table-cell-wrap-value",
       "span.creator-category",
       "div[data-testid='creator-category']",
       "span.category-label",
       "div.creator-meta span.category"
     ],
     "pengikut": [
-      "span.follower-count",
-      "div[data-metric='followers'] span.count",
-      "span[data-testid='follower-count']",
-      "div.creator-stats span.followers",
-      "span.pengikut-count"
+      "span.arco-table-cell-wrap-value",
+      "span.text-overflow-single",
+      "span[class*='text-overflow']",
+      "span:contains('rb')",
+      "span:contains('jt')",
+      "span:contains('k')",
+      "td:nth-child(2)",
+      "span.follower-count"
     ],
     "gmv": [
+      "span[class*='text-body-m-regular'][class*='text-neutral-text1']",
+      "span.text-body-m-regular:contains('Rp')",
+      "span[class*='text-body']:contains('Rp')",
+      "span:contains('Rp')",
+      "span:contains('M')",
+      "span:contains('JT')",
       "td:nth-child(3)",
-      "td[data-testid*='gmv']",
-      "span.gmv-value",
-      "div[data-metric='gmv'] span.value",
-      "span[data-testid='gmv-value']",
-      "div.creator-stats span.gmv",
-      "span.total-gmv"
+      "span.gmv-value"
     ],
     "produk_terjual": [
+      "span[class*='text-body-m-regular'][class*='text-neutral-text1']:not(:contains('Rp'))",
+      "span.text-body-m-regular.justify-end:not(:contains('Rp'))",
+      "span[class*='text-body']:not(:contains('Rp'))",
+      "span:contains('rb'):not(:contains('Rp'))",
+      "span:contains('jt'):not(:contains('Rp'))",
       "td:nth-child(4)",
-      "td[data-testid*='produk']",
-      "span.product-sold-count",
-      "div[data-metric='products-sold'] span.count",
-      "span[data-testid='products-sold']",
-      "div.creator-stats span.produk-terjual",
-      "span.sold-count"
+      "span.product-sold-count"
     ],
     "rata_rata_tayangan": [
+      "span[class*='text-body-m-regular'][class*='text-neutral-text1']:not(:contains('Rp'))",
+      "span.text-body-m-regular.justify-end:not(:contains('Rp'))",
+      "span[class*='text-body']:not(:contains('Rp'))",
+      "span:contains('rb'):not(:contains('Rp'))",
+      "span:contains('jt'):not(:contains('Rp'))",
       "td:nth-child(5)",
-      "td[data-testid*='tayangan']",
-      "span.avg-view-count",
-      "div[data-metric='avg-views'] span.count",
-      "span[data-testid='avg-views']",
-      "div.creator-stats span.tayangan",
-      "span.average-views"
+      "span.avg-view-count"
     ],
     "tingkat_interaksi": [
       "td:nth-child(6)",
@@ -96,11 +100,9 @@
       "td:nth-child(1) a",
       "a[href*='creator']",
       "a[href*='profile']",
-      "a.creator-card-link",
-      "a[data-testid='creator-detail-link']",
-      "div.creator-card > a",
-      "a.creator-profile-link",
-      "a.view-detail"
+      "a[href*='detail']",
+      "a",
+      "a.creator-card-link"
     ]
   },
   "detail_page": {

@@ -107,6 +107,52 @@ graph TB
 
 ### Architecture Layers
 
+#### Tab Management Strategy
+
+**Challenge**: Tokopedia's anti-bot system triggers custom puzzle CAPTCHAs when affiliator profile links are clicked, but these puzzles disappear after a simple page refresh.
+
+**Solution**: Implement new tab management that mimics natural user behavior:
+
+1. **New Tab Opening**: Open each detail page in a new browser tab (not just navigate in the same tab)
+2. **Puzzle Detection**: Check for puzzle presence after page load
+3. **Auto-Refresh**: If puzzle detected, refresh the page once to bypass it
+4. **Verification**: Confirm actual profile data is now visible
+5. **Tab Cleanup**: Always close detail page tabs after extraction
+
+**Implementation**:
+```python
+async def scrape_detail_page(self, browser: Browser, detail_url: str) -> AffiliatorDetail:
+    """Scrape detail page using new tab strategy"""
+    detail_page = await browser.new_page()
+    
+    try:
+        # Navigate to detail page
+        await detail_page.goto(detail_url, wait_until="networkidle")
+        
+        # Wait for dynamic content
+        await asyncio.sleep(2)
+        
+        # Handle Tokopedia puzzle if present
+        if await self.captcha_handler.detect_tokopedia_puzzle(detail_page):
+            success = await self.captcha_handler.solve_tokopedia_puzzle(detail_page)
+            if not success:
+                raise PuzzleBypassError("Failed to bypass Tokopedia puzzle")
+        
+        # Extract data
+        html = await detail_page.content()
+        return self.extractor.extract_detail_page(html)
+        
+    finally:
+        # Always close the tab
+        await detail_page.close()
+```
+
+**Benefits**:
+- Mimics natural user behavior (opening links in new tabs)
+- Isolates puzzle handling per page
+- Prevents puzzle state from affecting other pages
+- Enables automatic puzzle bypass without manual intervention
+
 #### 1. Orchestration Layer
 - **Scraper Orchestrator**: Main controller coordinating all scraping operations
 - **Configuration Manager**: Loads and validates configuration from JSON files
@@ -140,7 +186,51 @@ graph TB
 - **Error Analyzer**: Detects bot detection triggers and adjusts behavior
 - **CAPTCHA Handler**: Detects and solves CAPTCHAs
 
-### Component Interaction Flow
+### Tab Management Strategy
+
+**Challenge**: Tokopedia's anti-bot system triggers custom puzzle CAPTCHAs when affiliator profile links are clicked, but these puzzles disappear after a simple page refresh.
+
+**Solution**: Implement new tab management that mimics natural user behavior:
+
+1. **New Tab Opening**: Open each detail page in a new browser tab (not just navigate in the same tab)
+2. **Puzzle Detection**: Check for puzzle presence after page load
+3. **Auto-Refresh**: If puzzle detected, refresh the page once to bypass it
+4. **Verification**: Confirm actual profile data is now visible
+5. **Tab Cleanup**: Always close detail page tabs after extraction
+
+**Implementation**:
+```python
+async def scrape_detail_page(self, browser: Browser, detail_url: str) -> AffiliatorDetail:
+    """Scrape detail page using new tab strategy"""
+    detail_page = await browser.new_page()
+    
+    try:
+        # Navigate to detail page
+        await detail_page.goto(detail_url, wait_until="networkidle")
+        
+        # Wait for dynamic content
+        await asyncio.sleep(2)
+        
+        # Handle Tokopedia puzzle if present
+        if await self.captcha_handler.detect_tokopedia_puzzle(detail_page):
+            success = await self.captcha_handler.solve_tokopedia_puzzle(detail_page)
+            if not success:
+                raise PuzzleBypassError("Failed to bypass Tokopedia puzzle")
+        
+        # Extract data
+        html = await detail_page.content()
+        return self.extractor.extract_detail_page(html)
+        
+    finally:
+        # Always close the tab
+        await detail_page.close()
+```
+
+**Benefits**:
+- Mimics natural user behavior (opening links in new tabs)
+- Isolates puzzle handling per page
+- Prevents puzzle state from affecting other pages
+- Enables automatic puzzle bypass without manual intervention
 
 
 ```mermaid
@@ -618,7 +708,7 @@ class DataStore:
 
 ### 14. CAPTCHA Handler
 
-**Responsibility**: Detects and solves CAPTCHAs.
+**Responsibility**: Detects and solves CAPTCHAs, including Tokopedia's custom puzzle CAPTCHA.
 
 **Interface**:
 ```python
@@ -631,6 +721,12 @@ class CAPTCHAHandler:
         
     async def solve(self, page: Page, captcha_type: CAPTCHAType) -> bool:
         """Solve detected CAPTCHA"""
+        
+    async def detect_tokopedia_puzzle(self, page: Page) -> bool:
+        """Detect Tokopedia's custom puzzle CAPTCHA"""
+        
+    async def solve_tokopedia_puzzle(self, page: Page) -> bool:
+        """Solve Tokopedia puzzle by refreshing the page"""
 ```
 
 **CAPTCHA Types**:
@@ -638,11 +734,71 @@ class CAPTCHAHandler:
 - reCAPTCHA v3
 - hCaptcha
 - Image CAPTCHA
+- Tokopedia Custom Puzzle
 
 **Solving Strategies**:
 - `manual`: Pause and wait for user input
 - `2captcha`: Use 2Captcha API
 - `anticaptcha`: Use Anti-Captcha API
+- `tokopedia_refresh`: Auto-refresh for Tokopedia puzzles
+
+**Tokopedia Puzzle Detection**:
+The handler detects Tokopedia's custom puzzle CAPTCHA by looking for:
+- Puzzle-specific DOM elements or CSS classes
+- Absence of expected profile data elements
+- Specific page patterns that indicate puzzle presence
+- JavaScript-rendered puzzle components
+
+**Tokopedia Puzzle Solving Algorithm**:
+```python
+async def solve_tokopedia_puzzle(self, page: Page) -> bool:
+    """Solve Tokopedia puzzle by refreshing"""
+    max_attempts = 3
+    
+    for attempt in range(max_attempts):
+        # Wait for page to fully load
+        await asyncio.sleep(2)
+        
+        # Check if puzzle is present
+        if not await self.detect_tokopedia_puzzle(page):
+            return True  # No puzzle, success
+        
+        logger.info(f"Tokopedia puzzle detected, refreshing (attempt {attempt + 1})")
+        
+        # Refresh the page
+        await page.reload(wait_until="networkidle")
+        
+        # Wait for content to load
+        await asyncio.sleep(3)
+        
+        # Check if puzzle is gone and profile data is visible
+        if await self._verify_profile_data_visible(page):
+            logger.info("Tokopedia puzzle bypassed successfully")
+            return True
+    
+    logger.warning("Failed to bypass Tokopedia puzzle after all attempts")
+    return False
+
+async def _verify_profile_data_visible(self, page: Page) -> bool:
+    """Verify that actual profile data is visible (not puzzle)"""
+    # Look for expected profile elements
+    profile_indicators = [
+        "div.creator-profile",
+        "span.follower-count", 
+        "div.contact-info",
+        "div.stats-container"
+    ]
+    
+    for selector in profile_indicators:
+        try:
+            element = await page.wait_for_selector(selector, timeout=2000)
+            if element:
+                return True
+        except:
+            continue
+    
+    return False
+```
 
 ### 15. Error Analyzer
 
@@ -969,14 +1125,43 @@ async def scrape_all():
                 if random.random() < 0.07:  # 7% skip rate
                     continue
                 
-                # Navigate to detail page
-                detail_page = await browser.navigate(affiliator_summary.detail_url)
-                await behavioral_simulator.scroll_page(detail_page)
+                # Open detail page in new tab (mimics user behavior)
+                detail_page = await browser.new_page()
                 
-                # Extract detail
-                detail_html = await browser.get_html(detail_page)
-                detail_doc = html_parser.parse(detail_html)
-                affiliator_detail = affiliator_extractor.extract_detail_page(detail_doc)
+                try:
+                    # Navigate to detail page
+                    await detail_page.goto(affiliator_summary.detail_url, wait_until="networkidle")
+                    
+                    # Wait for content to load
+                    await asyncio.sleep(2)
+                    
+                    # Check for Tokopedia puzzle CAPTCHA
+                    if await captcha_handler.detect_tokopedia_puzzle(detail_page):
+                        puzzle_solved = await captcha_handler.solve_tokopedia_puzzle(detail_page)
+                        if not puzzle_solved:
+                            logger.warning(f"Failed to bypass Tokopedia puzzle for {affiliator_summary.detail_url}")
+                            continue
+                    
+                    # Check for other CAPTCHA types
+                    captcha_type = await captcha_handler.detect(detail_page)
+                    if captcha_type and captcha_type != "tokopedia_puzzle":
+                        solved = await captcha_handler.solve(detail_page, captcha_type)
+                        if not solved:
+                            logger.error(f"Failed to solve CAPTCHA on detail page {affiliator_summary.detail_url}")
+                            continue
+                    
+                    # Simulate human behavior on detail page
+                    await behavioral_simulator.scroll_page(detail_page)
+                    await behavioral_simulator.idle_behavior(detail_page, duration=1.5)
+                    
+                    # Extract detail
+                    detail_html = await detail_page.content()
+                    detail_doc = html_parser.parse(detail_html)
+                    affiliator_detail = affiliator_extractor.extract_detail_page(detail_doc)
+                    
+                finally:
+                    # Always close the detail page tab
+                    await detail_page.close()
                 
                 # Merge summary + detail
                 complete_data = merge_affiliator_data(affiliator_summary, affiliator_detail)
@@ -1814,6 +1999,24 @@ After analyzing all acceptance criteria, I identified the following properties s
 
 **Validates: Requirements 14.8, 17.6**
 
+### Property 31: Tokopedia Puzzle Detection Accuracy
+
+*For any* page containing Tokopedia puzzle elements, the puzzle detection method SHALL correctly identify the puzzle presence and return true.
+
+**Validates: Requirements 27.1, 27.5**
+
+### Property 32: Puzzle Refresh Strategy Limits Attempts
+
+*For any* Tokopedia puzzle encounter, the solving method SHALL attempt at most 3 refreshes before marking the page as failed.
+
+**Validates: Requirements 27.4**
+
+### Property 33: Consecutive Puzzle Detection Triggers Pause
+
+*For any* sequence of 5 or more consecutive pages with puzzles, the scraper SHALL pause for 5-10 minutes before continuing.
+
+**Validates: Requirements 27.10**
+
 ## Testing Strategy
 
 ### Dual Testing Approach
@@ -2438,6 +2641,10 @@ tests/
 - ✅ Rotate proxies (if configured)
 - ✅ Handle CAPTCHAs when encountered
 - ✅ Achieve 99.9% undetectability (< 0.1% block rate)
+- [ ] Handle Tokopedia custom puzzle CAPTCHAs automatically via refresh strategy
+- [ ] Open detail pages in new tabs to mimic natural user behavior
+- [ ] Detect and bypass Tokopedia puzzles with >90% success rate
+- [ ] Implement consecutive puzzle detection and pause mechanism
 
 ### Performance Requirements
 

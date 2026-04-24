@@ -179,6 +179,14 @@
 - [x] 17.8 Implement Anti-Captcha API integration
 - [x] 17.9 Implement exponential backoff after CAPTCHA encounters
 - [x] 17.10 Write integration tests for CAPTCHA handling
+- [ ] 17.11 Implement Tokopedia custom puzzle CAPTCHA detection
+- [ ] 17.12 Implement detect_tokopedia_puzzle() method with DOM element checks
+- [ ] 17.13 Implement solve_tokopedia_puzzle() method with auto-refresh strategy
+- [ ] 17.14 Implement _verify_profile_data_visible() method to confirm puzzle bypass
+- [ ] 17.15 Add puzzle encounter rate tracking and logging
+- [ ] 17.16 Implement consecutive puzzle detection and pause mechanism
+- [ ] 17.17 Write unit tests for Tokopedia puzzle detection logic
+- [ ] 17.18 Write integration tests for puzzle solving workflow
 
 ### Task 18: Logging System
 - [x] 18.1 Setup structlog for structured logging
@@ -211,6 +219,11 @@
 - [x] 20.9 Implement stop() method for graceful shutdown
 - [x] 20.10 Implement SIGINT handler for partial save
 - [x] 20.11 Write integration and E2E tests for orchestrator
+- [ ] 20.12 Update detail page scraping to open pages in new tabs
+- [ ] 20.13 Integrate Tokopedia puzzle CAPTCHA detection and solving
+- [ ] 20.14 Implement proper tab management (open/close detail page tabs)
+- [ ] 20.15 Add error handling for tab operations
+- [ ] 20.16 Update behavioral simulation for new tab workflow
 
 ### Task 21: Anti-Detection Integration
 - [x] 21.1 Integrate fingerprint generation into orchestrator
@@ -263,6 +276,9 @@
 - [x] 24.17 Write Property 20-21: Deduplication properties
 - [x] 24.18 Write Property 22-23: Session management properties
 - [x] 24.19 Write Property 24-30: Remaining properties
+- [ ] 24.20 Write Property 31: Tokopedia puzzle detection accuracy
+- [ ] 24.21 Write Property 32: Puzzle refresh strategy limits attempts
+- [ ] 24.22 Write Property 33: Consecutive puzzle detection triggers pause
 
 ### Task 25: Integration Tests
 - [x] 25.1 Write HTTP client integration tests
@@ -271,6 +287,9 @@
 - [x] 25.4 Write proxy integration tests
 - [x] 25.5 Write CAPTCHA integration tests
 - [x] 25.6 Write Redis integration tests (distributed mode)
+- [ ] 25.7 Write Tokopedia puzzle CAPTCHA integration tests
+- [ ] 25.8 Write new tab management integration tests
+- [ ] 25.9 Write puzzle detection with real Tokopedia pages integration tests
 
 ### Task 26: End-to-End Tests
 - [x] 26.1 Create test fixtures (HTML samples, configs)
@@ -279,6 +298,9 @@
 - [x] 26.4 Write E2E test: checkpoint and resume
 - [x] 26.5 Write E2E test: error recovery
 - [x] 26.6 Write E2E test: rate limiting enforcement
+- [ ] 26.7 Write E2E test: Tokopedia puzzle CAPTCHA handling workflow
+- [ ] 26.8 Write E2E test: new tab management for detail pages
+- [ ] 26.9 Write E2E test: consecutive puzzle detection and pause mechanism
 
 ### Task 27: Anti-Detection Verification
 - [x] 27.1 Manual test: CreepJS fingerprint detection
@@ -287,6 +309,9 @@
 - [x] 27.4 Manual test: Behavioral analysis recording
 - [x] 27.5 Real-world test: Tokopedia Affiliate Center scraping
 - [x] 27.6 Measure success rate and adjust configuration
+- [ ] 27.7 Manual test: New tab behavior mimics natural user patterns
+- [ ] 27.8 Real-world test: Tokopedia puzzle CAPTCHA bypass success rate
+- [ ] 27.9 Verify puzzle detection doesn't trigger false positives on normal pages
 
 ### Task 28: Performance Optimization
 - [x] 28.1 Profile memory usage
@@ -331,13 +356,15 @@
 
 ## Success Criteria
 
-- [x] All 32 tasks completed
+- [ ] All 32+ tasks completed (including new Tokopedia puzzle handling tasks)
 - [x] Test coverage > 80%
-- [x] All property-based tests pass (100+ iterations each)
+- [ ] All property-based tests pass (100+ iterations each, including new puzzle properties)
 - [x] All integration tests pass
 - [x] All E2E tests pass
 - [x] Anti-detection verification passed (CreepJS, bot.sannysoft.com)
-- [x] Real-world test: 99.9% undetectability (< 0.1% block rate)
+- [ ] Real-world test: 99.9% undetectability (< 0.1% block rate) including puzzle bypass
 - [x] Performance targets met: 100 affiliators in < 30 min, memory < 500 MB
 - [x] Documentation complete
 - [x] Production deployment successful
+- [ ] Tokopedia puzzle CAPTCHA bypass success rate >90%
+- [ ] New tab management works reliably without browser crashes

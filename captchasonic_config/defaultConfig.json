@@ -1,0 +1,15 @@
+{
+  "apiKey": "sonic_1154680f3f0bc5f058e700d7c0bf6b1d4336",
+  "enabled": true,
+  "autoSolve": true,
+  "timeout": 60,
+  "retries": 3,
+  "supportedCaptchas": [
+    "recaptcha_v2",
+    "recaptcha_v3",
+    "hcaptcha",
+    "aws_captcha",
+    "geetest",
+    "mtcaptcha"
+  ]
+}

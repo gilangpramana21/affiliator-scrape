@@ -1,0 +1,86 @@
+{
+  "captcha_config": {
+    "primary_captcha_service": "capsolver",
+    "enable_captcha_failover": true,
+    "max_captcha_solve_time": 120,
+    
+    "api_keys": {
+      "capsolver_api_key": "YOUR_CAPSOLVER_API_KEY_HERE",
+      "2captcha_api_key": "YOUR_2CAPTCHA_API_KEY_HERE", 
+      "anticaptcha_api_key": "YOUR_ANTICAPTCHA_API_KEY_HERE",
+      "nocaptcha_api_key": "YOUR_NOCAPTCHA_API_KEY_HERE"
+    },
+    
+    "service_priority": [
+      "capsolver",
+      "nocaptcha", 
+      "anticaptcha",
+      "2captcha"
+    ],
+    
+    "tiktok_optimization": {
+      "enable_tiktok_detection": true,
+      "tiktok_solve_timeout": 180,
+      "bytedance_geetest_support": true,
+      "puzzle_captcha_support": true
+    },
+    
+    "advanced_settings": {
+      "retry_failed_service": false,
+      "service_cooldown_seconds": 30,
+      "max_concurrent_solves": 1,
+      "enable_service_stats": true,
+      "auto_switch_to_best_service": true
+    }
+  },
+  
+  "recommended_services": {
+    "capsolver": {
+      "description": "Best for TikTok/ByteDance CAPTCHAs",
+      "strengths": ["TikTok puzzles", "GeeTest", "High success rate"],
+      "pricing": "$0.8-2.0 per 1000 solves",
+      "signup_url": "https://capsolver.com",
+      "recommended_for": ["TikTok", "ByteDance", "Complex puzzles"]
+    },
+    
+    "2captcha": {
+      "description": "Most reliable general service",
+      "strengths": ["Reliability", "Wide support", "Good documentation"],
+      "pricing": "$2.99 per 1000 solves", 
+      "signup_url": "https://2captcha.com",
+      "recommended_for": ["reCAPTCHA", "hCaptcha", "General use"]
+    },
+    
+    "anticaptcha": {
+      "description": "Fast and reliable",
+      "strengths": ["Speed", "Good API", "Reliable"],
+      "pricing": "$2.0 per 1000 solves",
+      "signup_url": "https://anti-captcha.com", 
+      "recommended_for": ["reCAPTCHA", "Speed critical"]
+    },
+    
+    "nocaptcha": {
+      "description": "Specialized for complex puzzles",
+      "strengths": ["Complex puzzles", "Image recognition", "Coordinates"],
+      "pricing": "$1.5-3.0 per 1000 solves",
+      "signup_url": "https://nocaptcha.io",
+      "recommended_for": ["Puzzle CAPTCHAs", "Image tasks"]
+    }
+  },
+  
+  "setup_instructions": {
+    "step_1": "Sign up for at least 2 services (CapSolver + 2Captcha recommended)",
+    "step_2": "Get API keys from service dashboards", 
+    "step_3": "Add API keys to this config file",
+    "step_4": "Test with test_premium_captcha.py script",
+    "step_5": "Monitor success rates and adjust service priority"
+  },
+  
+  "cost_optimization": {
+    "daily_budget_usd": 10.0,
+    "estimated_captchas_per_day": 500,
+    "cost_per_captcha_target": "$0.002",
+    "enable_budget_alerts": true,
+    "stop_on_budget_exceeded": false
+  }
+}

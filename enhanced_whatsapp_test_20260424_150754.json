@@ -1,0 +1,25 @@
+{
+  "test_info": {
+    "test_type": "enhanced_whatsapp_extraction",
+    "timestamp": "20260424_150754",
+    "creators_tested": 1,
+    "phone_found": 1,
+    "whatsapp_static": 1,
+    "whatsapp_interactive": 0,
+    "whatsapp_total": 1,
+    "improvement_count": 0,
+    "whatsapp_success_rate": 100.0
+  },
+  "results": [
+    {
+      "username": "aandriyanie",
+      "detail_username": "creator_74939957",
+      "phone": "+62202604241605",
+      "whatsapp_static": "+6220260424160533",
+      "whatsapp_interactive": null,
+      "whatsapp_final": "+6220260424160533",
+      "url": "https://affiliate-id.tokopedia.com/connection/creator/detail?cid=7493995761385637509&pair_source=author_recommend&enter_from=affiliate_find_creators&search_key=H8YQrbOkiVR2IwiKs1kBlyAm/XxztsseOaLb4YJD/Lw=&req_id=2026042416051401BC4BB25AF02500038C&query=&shop_region=ID&shop_id=7495177173399997259",
+      "extraction_method": "static"
+    }
+  ]
+}

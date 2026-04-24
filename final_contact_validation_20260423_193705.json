@@ -1,0 +1,22 @@
+{
+  "test_info": {
+    "test_type": "final_contact_validation",
+    "timestamp": "20260423_193705",
+    "total_scraped": 1,
+    "unique_affiliators": 1,
+    "errors": 0,
+    "duration": 237.192267
+  },
+  "creators": [
+    {
+      "username": "creator_74963042",
+      "kategori": "azisfandoipFurnitur",
+      "pengikut": 2129600,
+      "gmv": 1000000.0,
+      "nomor_kontak": "+62343544455455",
+      "nomor_whatsapp": null,
+      "detail_url": "https://affiliate-id.tokopedia.com/connection/creator/detail?cid=7496304204793612370&pair_source=author_recommend&enter_from=affiliate_find_creators&search_key=moLrQqnYOmc9rdb5vGEpMAVlRq7yu6mi5ces3EQr6Ak%3D&req_id=2026042320331242571D4EDEC0B302BD94&query=&shop_region=ID&shop_id=7495177173399997259",
+      "scraped_at": "2026-04-23T19:35:12.442257"
+    }
+  ]
+}

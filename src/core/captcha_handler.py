@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
+import time
 from enum import Enum
 from typing import Optional
 
@@ -86,6 +88,11 @@ class CAPTCHAHandler:
         # Exponential backoff state
         self._backoff_seconds: float = _INITIAL_BACKOFF
         self._captcha_encounter_count: int = 0
+        
+        # Tokopedia puzzle tracking
+        self._puzzle_encounter_count: int = 0
+        self._consecutive_puzzles: int = 0
+        self._last_puzzle_time: Optional[float] = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -182,6 +189,243 @@ class CAPTCHAHandler:
             )
             await asyncio.sleep(self._backoff_seconds)
 
+    async def detect_tokopedia_puzzle(self, page: Page) -> bool:
+        """Detect Tokopedia's custom puzzle CAPTCHA.
+        
+        Tokopedia shows a custom puzzle when users click on affiliator profile links.
+        This puzzle is different from standard CAPTCHAs and can be bypassed by refreshing.
+        
+        Returns:
+            True if Tokopedia puzzle is detected, False otherwise.
+        """
+        try:
+            # Wait for page to fully load and dynamic content to render
+            await asyncio.sleep(2)
+            
+            # Check for puzzle-specific indicators
+            puzzle_indicators = [
+                # Common puzzle-related selectors
+                'div[class*="puzzle"]',
+                'div[class*="challenge"]',
+                'div[class*="verification"]',
+                'div[id*="puzzle"]',
+                'div[id*="challenge"]',
+                # Tokopedia-specific puzzle patterns
+                'div[class*="captcha-container"]',
+                'div[class*="anti-bot"]',
+                'div[class*="security-check"]',
+            ]
+            
+            for selector in puzzle_indicators:
+                try:
+                    element = await page.query_selector(selector)
+                    if element:
+                        # Check if element is visible
+                        is_visible = await element.is_visible()
+                        if is_visible:
+                            logger.info(f"Tokopedia puzzle detected via selector: {selector}")
+                            return True
+                except Exception:
+                    continue
+            
+            # Check page content for puzzle-related text (only if page content is accessible)
+            try:
+                content = await page.content()
+                puzzle_text_patterns = [
+                    "verifikasi",
+                    "puzzle",
+                    "challenge",
+                    "security check",
+                    "anti-bot",
+                    "please wait",
+                    "loading",
+                ]
+                
+                content_lower = content.lower()
+                for pattern in puzzle_text_patterns:
+                    if pattern in content_lower:
+                        logger.info(f"Tokopedia puzzle detected via text pattern: {pattern}")
+                        return True
+                        
+            except Exception:
+                # If we can't access content, skip text-based detection
+                pass
+            
+            # Check for absence of expected profile data (indicates puzzle page)
+            # Only do this if we can successfully query selectors
+            try:
+                profile_indicators = [
+                    'div[class*="creator-profile"]',
+                    'div[class*="profile-header"]',
+                    'span[class*="follower"]',
+                    'div[class*="contact"]',
+                    'div[class*="stats"]',
+                    'div[class*="gmv"]',
+                ]
+                
+                profile_elements_found = 0
+                successful_queries = 0
+                
+                for selector in profile_indicators:
+                    try:
+                        element = await page.query_selector(selector)
+                        successful_queries += 1  # Count successful queries
+                        if element and await element.is_visible():
+                            profile_elements_found += 1
+                    except Exception:
+                        continue
+                
+                # Only consider insufficient profile data if we could actually query selectors
+                # If all queries failed, we can't make a determination
+                if successful_queries > 0 and profile_elements_found < 2:
+                    logger.info("Tokopedia puzzle suspected: insufficient profile data visible")
+                    return True
+                    
+            except Exception:
+                # If we can't query selectors at all, assume no puzzle
+                pass
+            
+            return False
+            
+        except Exception as exc:
+            logger.warning(f"Error detecting Tokopedia puzzle: {exc}")
+            return False
+
+    async def solve_tokopedia_puzzle(self, page: Page) -> bool:
+        """Solve Tokopedia puzzle by refreshing the page.
+        
+        Tokopedia's custom puzzle can usually be bypassed by simply refreshing
+        the page. This method attempts up to 3 refreshes before giving up.
+        
+        Returns:
+            True if puzzle was successfully bypassed, False otherwise.
+        """
+        max_attempts = 3
+        
+        for attempt in range(max_attempts):
+            try:
+                # Wait for page to fully load
+                await asyncio.sleep(2)
+                
+                # Check if puzzle is still present
+                if not await self.detect_tokopedia_puzzle(page):
+                    if attempt == 0:
+                        logger.info("Tokopedia puzzle already bypassed")
+                    else:
+                        logger.info("Tokopedia puzzle bypassed successfully")
+                    self._record_puzzle_encounter(success=True)
+                    return True
+                
+                logger.info(f"Tokopedia puzzle detected, refreshing page (attempt {attempt + 1}/{max_attempts})")
+                
+                # Refresh the page
+                await page.reload(wait_until="networkidle", timeout=30000)
+                
+                # Wait for content to load after refresh
+                await asyncio.sleep(3)
+                
+                # After refresh, verify that profile data is now visible
+                if await self._verify_profile_data_visible(page):
+                    logger.info("Tokopedia puzzle bypassed successfully after refresh")
+                    self._record_puzzle_encounter(success=True)
+                    return True
+                    
+            except Exception as exc:
+                logger.warning(f"Error during Tokopedia puzzle solve attempt {attempt + 1}: {exc}")
+                continue
+        
+        logger.warning("Failed to bypass Tokopedia puzzle after all attempts")
+        self._record_puzzle_encounter(success=False)
+        return False
+
+    def _record_puzzle_encounter(self, success: bool = False) -> None:
+        """Record a puzzle encounter and track consecutive failures."""
+        current_time = time.time()
+        self._puzzle_encounter_count += 1
+        
+        # Reset consecutive count if enough time has passed (5 minutes)
+        if (self._last_puzzle_time and 
+            current_time - self._last_puzzle_time > 300):
+            self._consecutive_puzzles = 0
+        
+        if success:
+            self._consecutive_puzzles = 0  # Reset on success
+        else:
+            self._consecutive_puzzles += 1
+            
+        self._last_puzzle_time = current_time
+        
+        # Log warning if consecutive puzzles are high
+        if self._consecutive_puzzles >= 3:
+            logger.warning(
+                f"High consecutive puzzle count: {self._consecutive_puzzles}. "
+                "Consider pausing scraping to avoid enhanced anti-bot measures."
+            )
+
+    def should_pause_for_puzzles(self) -> bool:
+        """Check if scraper should pause due to consecutive puzzle encounters.
+        
+        Returns:
+            True if 5+ consecutive puzzles encountered, False otherwise.
+        """
+        return self._consecutive_puzzles >= 5
+
+    async def wait_puzzle_pause(self) -> None:
+        """Wait for 5-10 minutes if too many consecutive puzzles encountered."""
+        if self.should_pause_for_puzzles():
+            pause_duration = random.uniform(300, 600)  # 5-10 minutes
+            logger.warning(
+                f"Pausing for {pause_duration:.0f} seconds due to {self._consecutive_puzzles} "
+                "consecutive puzzle encounters"
+            )
+            await asyncio.sleep(pause_duration)
+            self._consecutive_puzzles = 0  # Reset after pause
+
+    async def _verify_profile_data_visible(self, page: Page) -> bool:
+        """Verify that actual profile data is visible (not puzzle).
+        
+        Returns:
+            True if profile data elements are visible, False otherwise.
+        """
+        try:
+            # Look for expected profile elements with timeout
+            profile_indicators = [
+                'div[class*="creator-profile"]',
+                'div[class*="profile-header"]', 
+                'span[class*="follower"]',
+                'div[class*="contact"]',
+                'div[class*="stats"]',
+                'div[class*="gmv"]',
+                # Generic profile indicators
+                'h1, h2, h3',  # Profile name/title
+                'img[src*="avatar"], img[src*="profile"]',  # Profile image
+            ]
+            
+            visible_elements = 0
+            for selector in profile_indicators:
+                try:
+                    element = await page.wait_for_selector(selector, timeout=2000)
+                    if element and await element.is_visible():
+                        visible_elements += 1
+                        if visible_elements >= 2:  # At least 2 profile elements visible
+                            return True
+                except Exception:
+                    continue
+            
+            # Also check for non-empty text content (indicates loaded page)
+            try:
+                text_content = await page.evaluate("() => document.body.innerText.trim()")
+                if text_content and len(text_content) > 100:  # Reasonable amount of content
+                    return True
+            except Exception:
+                pass
+            
+            return False
+            
+        except Exception as exc:
+            logger.warning(f"Error verifying profile data visibility: {exc}")
+            return False
+
     @property
     def backoff_seconds(self) -> float:
         """Current backoff duration in seconds."""
@@ -191,6 +435,16 @@ class CAPTCHAHandler:
     def captcha_encounter_count(self) -> int:
         """Total number of CAPTCHA encounters recorded."""
         return self._captcha_encounter_count
+    
+    @property
+    def puzzle_encounter_count(self) -> int:
+        """Total number of Tokopedia puzzle encounters recorded."""
+        return self._puzzle_encounter_count
+    
+    @property
+    def consecutive_puzzle_count(self) -> int:
+        """Number of consecutive puzzle encounters."""
+        return self._consecutive_puzzles
 
     # ------------------------------------------------------------------
     # Detection helpers (17.3 – 17.5)

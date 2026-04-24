@@ -1,0 +1,22 @@
+{
+  "test_info": {
+    "test_type": "final_contact_validation",
+    "timestamp": "20260423_193105",
+    "total_scraped": 1,
+    "unique_affiliators": 1,
+    "errors": 0,
+    "duration": 242.04906
+  },
+  "creators": [
+    {
+      "username": "creator_74956481",
+      "kategori": "Erna SupriatinPeralatan Dapur",
+      "pengikut": 249100,
+      "gmv": 1000000.0,
+      "nomor_kontak": "343544455455",
+      "nomor_whatsapp": null,
+      "detail_url": "https://affiliate-id.tokopedia.com/connection/creator/detail?cid=7495648170467625371&pair_source=author_recommend&enter_from=affiliate_find_creators&search_key=xvt4hQ5RIGEbq4Tq%2BAdhldJjq6XnYOIPy1COqSPo5p0%3D&req_id=202604232027081C494B306841A601EF30&query=&shop_region=ID&shop_id=7495177173399997259",
+      "scraped_at": "2026-04-23T19:29:12.503895"
+    }
+  ]
+}

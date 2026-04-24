@@ -1,0 +1,13 @@
+{
+  "test_type": "focused_production",
+  "duration": 186.9059820175171,
+  "total_scraped": 1,
+  "unique_affiliators": 1,
+  "duplicates_found": 0,
+  "errors": 0,
+  "captchas_encountered": 0,
+  "success_rate": 100.0,
+  "creators_per_minute": 0.3210170126838247,
+  "start_time": "2026-04-23T19:11:31.128443",
+  "end_time": "2026-04-23T19:14:38.034395"
+}
