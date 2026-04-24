@@ -552,8 +552,15 @@ class ScraperOrchestrator:
                 await detail_page.goto(detail_url, wait_until="networkidle", timeout=30000)
                 self._traffic_controller.record_request()
             
-            # Wait for dynamic content to load
-            await asyncio.sleep(2)
+            # Wait for dynamic content to load with longer delay for public WiFi
+            await asyncio.sleep(5)  # Increased from 2 to 5 seconds for public WiFi
+            
+            # Handle "Coba Lagi" message and public WiFi conditions
+            await self._handle_coba_lagi_message(detail_page)
+            await self._handle_public_wifi_conditions(detail_page)
+            
+            # Handle "Coba Lagi" message and Tokopedia puzzle
+            await self._handle_coba_lagi_message(detail_page)
             
             # Handle Tokopedia puzzle if present
             if await self._captcha_handler.detect_tokopedia_puzzle(detail_page):
@@ -924,6 +931,95 @@ class ScraperOrchestrator:
                 clean_phones.append(clean)
         
         return clean_phones
+
+    async def _handle_coba_lagi_message(self, page) -> None:
+        """Handle 'Coba Lagi' message by refreshing the page.
+        
+        This message appears when Tokopedia detects suspicious activity,
+        especially common when using public WiFi or when IP reputation is low.
+        """
+        try:
+            # Check for "Coba Lagi" text in various forms
+            coba_lagi_patterns = [
+                "coba lagi",
+                "try again", 
+                "silakan coba lagi",
+                "please try again",
+                "terjadi kesalahan",
+                "something went wrong"
+            ]
+            
+            page_content = await page.content()
+            page_text = page_content.lower()
+            
+            # Check if any "coba lagi" pattern exists
+            coba_lagi_detected = any(pattern in page_text for pattern in coba_lagi_patterns)
+            
+            if coba_lagi_detected:
+                logger.info("'Coba Lagi' message detected - refreshing page")
+                
+                # Refresh the page
+                await page.reload(wait_until="domcontentloaded", timeout=15000)
+                await asyncio.sleep(3)
+                
+                # Check again after refresh
+                page_content_after = await page.content()
+                page_text_after = page_content_after.lower()
+                
+                still_has_coba_lagi = any(pattern in page_text_after for pattern in coba_lagi_patterns)
+                
+                if still_has_coba_lagi:
+                    logger.warning("'Coba Lagi' message still present after refresh - may need longer delay")
+                    # Wait longer for public WiFi conditions
+                    await asyncio.sleep(5)
+                    
+                    # Try one more refresh
+                    await page.reload(wait_until="domcontentloaded", timeout=15000)
+                    await asyncio.sleep(3)
+                else:
+                    logger.info("'Coba Lagi' message resolved after refresh")
+            
+        except Exception as e:
+            logger.warning(f"Error handling 'Coba Lagi' message: {e}")
+
+    async def _handle_public_wifi_conditions(self, page) -> None:
+        """Handle conditions specific to public WiFi usage.
+        
+        Public WiFi often triggers more aggressive anti-bot measures:
+        - More frequent CAPTCHAs
+        - Rate limiting
+        - "Coba Lagi" messages
+        - IP reputation issues
+        """
+        try:
+            # Longer delays for public WiFi
+            base_delay = 3.0
+            public_wifi_delay = base_delay * 1.5  # 50% longer delays
+            
+            await asyncio.sleep(public_wifi_delay)
+            
+            # Check for common public WiFi detection indicators
+            indicators = [
+                "[class*='rate-limit']",
+                "[class*='blocked']", 
+                "[class*='suspicious']",
+                "text:coba lagi",
+                "text:try again"
+            ]
+            
+            for indicator in indicators:
+                try:
+                    elements = await page.query_selector_all(indicator)
+                    if elements:
+                        logger.info(f"Public WiFi restriction detected: {indicator}")
+                        # Longer wait for public WiFi restrictions
+                        await asyncio.sleep(10)
+                        break
+                except:
+                    continue
+                    
+        except Exception as e:
+            logger.warning(f"Error handling public WiFi conditions: {e}")
 
     def _normalize_phone_number_interactive(self, phone: str) -> Optional[str]:
         """Normalize phone number found via interactive extraction."""

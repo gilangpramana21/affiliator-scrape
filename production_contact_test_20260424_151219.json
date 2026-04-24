@@ -1,0 +1,59 @@
+{
+  "test_info": {
+    "test_type": "production_contact_extraction",
+    "timestamp": "20260424_151219",
+    "creators_tested": 5,
+    "success_rate": 20.0
+  },
+  "statistics": {
+    "total_tested": 5,
+    "phone_static": 1,
+    "whatsapp_static": 1,
+    "whatsapp_interactive": 0,
+    "total_phone": 1,
+    "total_whatsapp": 1,
+    "total_contact": 1,
+    "success_rate": 20.0
+  },
+  "results": [
+    {
+      "creator_index": 1,
+      "username": "fleuraaku",
+      "detail_username": "creator_74939972",
+      "phone": "+62202604241611",
+      "whatsapp_static": "+62202604241611114",
+      "whatsapp_interactive": null,
+      "whatsapp_final": "+62202604241611114",
+      "has_contact": true,
+      "extraction_methods": {
+        "phone": "static",
+        "whatsapp": "static"
+      },
+      "url": "https://affiliate-id.tokopedia.com/connection/creator/detail?cid=7493997203435128370&pair_source=author_recommend&enter_from=affiliate_find_creators&search_key=wbSBn4FuoHCOKUvXhq5sOCmaQqAz5XCJKNhzv60h2ps=&req_id=202604241610496892BB0054B4F8006E36&query=&shop_region=ID&shop_id=7495177173399997259"
+    },
+    {
+      "creator_index": 2,
+      "username": "amaliacitra96",
+      "error": "No detail page opened",
+      "has_contact": false
+    },
+    {
+      "creator_index": 3,
+      "username": "noyenooy",
+      "error": "No detail page opened",
+      "has_contact": false
+    },
+    {
+      "creator_index": 4,
+      "username": "mardefdaily",
+      "error": "No detail page opened",
+      "has_contact": false
+    },
+    {
+      "creator_index": 5,
+      "username": "dirga.alvian",
+      "error": "No detail page opened",
+      "has_contact": false
+    }
+  ]
+}

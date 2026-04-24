@@ -1,0 +1,44 @@
+{
+  "base_url": "https://affiliate-id.tokopedia.com",
+  "list_page_url": "/connection/creator/find",
+  "list_page_query": "?enter_from=affiliate_find_creators&search_key=H8YQrbOkiVR2IwiKs1kBlyAm%2FXxztsseOaLb4YJD%2FLw%3D&req_id=2026042320331242571D4EDEC0B302BD94&query=&shop_region=ID&shop_id=7495177173399997259",
+  
+  "browser_engine": "playwright",
+  "headless": false,
+  "
+  
+  "min_delay": 8.0,
+  "max_delay": 15.0,
+  "jitter": 0.3,
+  
+  "hourly_limit": 30,
+  "daily_limit": 200,
+  "max_session_duration": 1800,
+  "break_duration_min": 300,
+  "break_duration_max": 600,
+  "quiet_hours": [0, 1, 2, 3, 4, 5],
+  
+  "max_pages_per_run": 10,
+  "max_errors_before_stop": 15,
+  "max_captchas_before_stop": 8,
+  "save_interval": 3,
+  "incremental_save": true,
+  
+  "captcha_solver": "manual",
+  "captcha_api_key": "",
+  
+  "output_format": "json",
+  "output_path": "output/affiliators_public_wifi.json",
+  
+  "cookie_file": "config/cookies.json",
+  "require_cookie_file": true,
+  
+  "distributed": false,
+  "redis_url": "",
+  "instance_id": "",
+  
+  "public_wifi_mode": true,
+  "extra_delays": true,
+  "aggressive_captcha_handling": true,
+  "coba_lagi_auto_refresh": true
+}
