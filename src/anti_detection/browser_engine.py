@@ -168,8 +168,22 @@ class BrowserEngine:
     # Public API
     # ------------------------------------------------------------------
 
-    async def launch(self, fingerprint: BrowserFingerprint, headless: bool = True) -> Browser:
-        """Launch Chromium with the given fingerprint and stealth patches applied."""
+    async def launch(
+        self, 
+        fingerprint: BrowserFingerprint, 
+        headless: bool = True,
+        proxy: Optional[dict] = None
+    ) -> Browser:
+        """Launch Chromium with the given fingerprint and stealth patches applied.
+        
+        Args:
+            fingerprint: Browser fingerprint configuration
+            headless: Whether to run in headless mode
+            proxy: Optional proxy configuration dict with keys:
+                   - server: Proxy server URL (e.g., "http://proxy.com:8080")
+                   - username: Proxy username (optional)
+                   - password: Proxy password (optional)
+        """
         self._playwright = await async_playwright().start()
 
         width, height = fingerprint.viewport_size
@@ -186,15 +200,22 @@ class BrowserEngine:
             ],
         )
 
-        self._context = await self._browser.new_context(
-            user_agent=fingerprint.user_agent,
-            viewport={"width": width, "height": height},
-            locale=fingerprint.language,
-            timezone_id=fingerprint.timezone,
-            color_scheme="no-preference",
-            device_scale_factor=fingerprint.pixel_ratio,
-            extra_http_headers=self._build_extra_headers(fingerprint),
-        )
+        # Build context options
+        context_options = {
+            "user_agent": fingerprint.user_agent,
+            "viewport": {"width": width, "height": height},
+            "locale": fingerprint.language,
+            "timezone_id": fingerprint.timezone,
+            "color_scheme": "no-preference",
+            "device_scale_factor": fingerprint.pixel_ratio,
+            "extra_http_headers": self._build_extra_headers(fingerprint),
+        }
+        
+        # Add proxy if provided
+        if proxy:
+            context_options["proxy"] = proxy
+        
+        self._context = await self._browser.new_context(**context_options)
 
         # Inject stealth patches for every new page opened in this context
         await self._inject_stealth_scripts(self._context, fingerprint)

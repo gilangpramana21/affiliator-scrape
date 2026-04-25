@@ -390,7 +390,12 @@ class TokopediaExtractor:
         return None
     
     def _normalize_phone_number(self, phone: str) -> Optional[str]:
-        """Normalize phone number to Indonesian format (08... or +62...)."""
+        """Normalize phone number to Indonesian format (08... or +62...).
+        
+        Valid Indonesian phone numbers:
+        - Mobile: 08xx-xxxx-xxxx (10-13 digits total)
+        - International: +62-8xx-xxxx-xxxx (12-15 digits total including +62)
+        """
         
         if not phone:
             return None
@@ -398,32 +403,37 @@ class TokopediaExtractor:
         # Remove all non-digit characters except +
         clean = re.sub(r'[^\d+]', '', phone)
         
-        # Remove leading zeros and spaces
-        clean = clean.lstrip('0')
+        # Remove leading zeros (but keep + if present)
+        if clean.startswith('+'):
+            prefix = '+'
+            clean = clean[1:].lstrip('0')
+            clean = prefix + clean
+        else:
+            clean = clean.lstrip('0')
         
         # Handle different formats
         if clean.startswith('+62'):
             # Already in +62 format
-            if len(clean) >= 12:  # +62 + at least 9 digits
-                return clean
+            # Valid: +62 + 8-13 digits = 12-15 total length
+            if 12 <= len(clean) <= 15:
+                # Must start with +628 (Indonesian mobile)
+                if clean[3] == '8':
+                    return clean
         elif clean.startswith('62'):
             # Convert 62xxx to +62xxx
-            if len(clean) >= 11:  # 62 + at least 9 digits
-                return '+' + clean
-        elif clean.startswith('8') and len(clean) >= 9:
+            # Valid: 62 + 8-13 digits = 11-14 total length
+            if 11 <= len(clean) <= 14:
+                # Must start with 628 (Indonesian mobile)
+                if clean[2] == '8':
+                    return '+' + clean
+        elif clean.startswith('8'):
             # Convert 8xxx to 08xxx (Indonesian mobile format)
-            return '08' + clean
-        elif len(clean) >= 10:
-            # For other formats, try to convert to 08xxx if it looks like mobile
-            # Indonesian mobile numbers typically start with 8 after country code
-            if clean[0] in '8':
-                return '08' + clean
-            # Otherwise try +62 format
-            elif clean[0] in '1234567':
-                return '+62' + clean
+            # Valid: 8 + 8-12 more digits = 9-13 total length
+            if 9 <= len(clean) <= 13:
+                return '0' + clean
         
         # If we can't normalize it properly, return None
-        logger.debug(f"Could not normalize phone number: {phone}")
+        logger.debug(f"Could not normalize phone number (invalid format or length): {phone} -> {clean}")
         return None
     
     def _extract_gmv_from_row(self, row: Element) -> Optional[float]:
