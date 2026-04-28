@@ -1,0 +1,37 @@
+{
+  "scrape_info": {
+    "timestamp": "20260425_165126",
+    "total_results": 1,
+    "statistics": {
+      "total_processed": 10,
+      "metrics_success": 1,
+      "contact_success": 0,
+      "captcha_encountered": 0,
+      "captcha_solved": 0,
+      "proxy_switches": 0,
+      "failed": 0
+    },
+    "proxy_stats": {
+      "total": 1,
+      "working": 1,
+      "failed": 0
+    }
+  },
+  "results": [
+    {
+      "username": "dessyayunita",
+      "kategori": "Dessy ayunitaWomenswear & Underwear",
+      "pengikut": 210700,
+      "gmv": 11000000.0,
+      "produk_terjual": null,
+      "rata_rata_tayangan": null,
+      "tingkat_interaksi": null,
+      "gmv_per_pembeli": null,
+      "whatsapp": null,
+      "email": null,
+      "extraction_method": "detail_page",
+      "scraped_at": "2026-04-25T16:46:35.646005",
+      "proxy_used": "31.59.20.176:6754 (webshare)"
+    }
+  ]
+}

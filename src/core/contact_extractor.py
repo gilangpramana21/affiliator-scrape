@@ -1,328 +1,313 @@
-"""Contact extractor untuk mengambil WhatsApp, email, dan social media dari detail pages."""
-
+"""
+Contact Extractor - Specialized extractor for WhatsApp and Email contacts
+"""
 import re
-import asyncio
-import logging
-from typing import Dict, Optional, List
-from dataclasses import dataclass
+from typing import Optional, Dict
+from lxml import html as lxml_html
 
-logger = logging.getLogger(__name__)
-
-@dataclass
-class ContactInfo:
-    """Contact information extracted from creator detail page."""
-    whatsapp: Optional[str] = None
-    email: Optional[str] = None
-    instagram: Optional[str] = None
-    tiktok: Optional[str] = None
-    line: Optional[str] = None
-    telegram: Optional[str] = None
 
 class ContactExtractor:
-    """Extractor untuk mengambil contact data dari halaman detail creator."""
+    """Extracts WhatsApp and Email contact information from HTML"""
+    
+    # Multiple selector strategies for WhatsApp
+    WHATSAPP_SELECTORS = [
+        # Common patterns for WhatsApp display
+        "//a[contains(@href, 'wa.me')]",
+        "//a[contains(@href, 'whatsapp')]",
+        "//a[contains(@href, 'api.whatsapp.com')]",
+        "//span[contains(text(), 'WhatsApp')]/..//a",
+        "//div[contains(@class, 'whatsapp')]//a",
+        "//div[contains(@class, 'contact')]//a[contains(@href, 'tel:')]",
+        # Text patterns
+        "//span[contains(text(), 'WA:')]",
+        "//span[contains(text(), 'WhatsApp:')]",
+        "//div[contains(text(), 'WhatsApp')]",
+        # Phone number patterns
+        "//a[starts-with(@href, 'tel:')]",
+        "//span[contains(@class, 'phone')]",
+        "//div[contains(@class, 'phone')]",
+    ]
+    
+    # Multiple selector strategies for Email
+    EMAIL_SELECTORS = [
+        # Common patterns for email display
+        "//a[contains(@href, 'mailto:')]",
+        "//span[contains(text(), 'Email')]/..//a",
+        "//div[contains(@class, 'email')]//a",
+        "//span[contains(@class, 'email')]",
+        "//div[contains(@class, 'contact')]//a[contains(@href, 'mailto:')]",
+        # Text patterns
+        "//span[contains(text(), 'Email:')]",
+        "//div[contains(text(), 'Email:')]",
+        "//span[contains(text(), '@')]",
+    ]
+    
+    # Indonesian phone number patterns
+    PHONE_PATTERNS = [
+        r'\+62\s*\d{2,3}[\s-]?\d{3,4}[\s-]?\d{3,4}[\s-]?\d{0,4}',  # +62 xxx-xxxx-xxxx
+        r'62\d{9,13}',  # 62xxxxxxxxxx
+        r'08\d{8,12}',  # 08xxxxxxxxxx
+        r'0\d{2,3}[\s-]?\d{3,4}[\s-]?\d{3,4}',  # 0xxx-xxxx-xxxx
+    ]
+    
+    # Email pattern
+    EMAIL_PATTERN = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
     
     def __init__(self):
-        self.whatsapp_patterns = [
-            r'(?:whatsapp|wa)[^\d]*(\+?62\d{8,13})',
-            r'(?:hp|phone|telp)[^\d]*(\+?62\d{8,13})',
-            r'(\+62\d{8,13})',
-            r'(08\d{8,11})',
-            r'(62\d{8,13})'
-        ]
-        
-        self.email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        
-        self.instagram_patterns = [
-            r'instagram\.com/([a-zA-Z0-9_.]+)',
-            r'ig[:\s]*@?([a-zA-Z0-9_.]+)',
-            r'@([a-zA-Z0-9_.]+)'
-        ]
-        
-        self.tiktok_patterns = [
-            r'tiktok\.com/@([a-zA-Z0-9_.]+)',
-            r'tiktok[:\s]*@?([a-zA-Z0-9_.]+)',
-            r'tt[:\s]*@?([a-zA-Z0-9_.]+)'
-        ]
-        
-        self.excluded_email_domains = [
-            'tokopedia.com', 'example.com', 'test.com', 'noreply.com',
-            'no-reply.com', 'donotreply.com', 'support.com'
-        ]
+        self.phone_regex = re.compile('|'.join(self.PHONE_PATTERNS))
+        self.email_regex = re.compile(self.EMAIL_PATTERN)
     
-    async def extract_contact_info(self, page, creator_username: str) -> ContactInfo:
-        """Extract contact information from creator detail page."""
+    def extract_whatsapp(self, html_content: str) -> Optional[str]:
+        """
+        Extract WhatsApp number from HTML content
         
-        contact_info = ContactInfo()
-        
+        Args:
+            html_content: HTML string to parse
+            
+        Returns:
+            WhatsApp number in standardized format, or None if not found
+        """
         try:
-            logger.info(f"Extracting contact info for {creator_username}")
-            
-            # Wait for page to load completely
-            await asyncio.sleep(3)
-            
-            # Get page content
-            html = await page.content()
-            
-            # Extract WhatsApp
-            contact_info.whatsapp = self._extract_whatsapp(html)
-            
-            # Extract email
-            contact_info.email = self._extract_email(html)
-            
-            # Extract Instagram
-            contact_info.instagram = self._extract_instagram(html)
-            
-            # Extract TikTok
-            contact_info.tiktok = self._extract_tiktok(html)
-            
-            # Extract Line ID
-            contact_info.line = self._extract_line(html)
-            
-            # Extract Telegram
-            contact_info.telegram = self._extract_telegram(html)
-            
-            # Log results
-            found_contacts = []
-            if contact_info.whatsapp:
-                found_contacts.append(f"WhatsApp: {contact_info.whatsapp}")
-            if contact_info.email:
-                found_contacts.append(f"Email: {contact_info.email}")
-            if contact_info.instagram:
-                found_contacts.append(f"Instagram: {contact_info.instagram}")
-            if contact_info.tiktok:
-                found_contacts.append(f"TikTok: {contact_info.tiktok}")
-            if contact_info.line:
-                found_contacts.append(f"Line: {contact_info.line}")
-            if contact_info.telegram:
-                found_contacts.append(f"Telegram: {contact_info.telegram}")
-            
-            if found_contacts:
-                logger.info(f"Found contacts for {creator_username}: {', '.join(found_contacts)}")
-            else:
-                logger.warning(f"No contact info found for {creator_username}")
-            
-            return contact_info
-            
+            doc = lxml_html.fromstring(html_content)
         except Exception as e:
-            logger.error(f"Error extracting contact info for {creator_username}: {e}")
-            return contact_info
-    
-    def _extract_whatsapp(self, html: str) -> Optional[str]:
-        """Extract WhatsApp number from HTML."""
+            print(f"Error parsing HTML for WhatsApp extraction: {e}")
+            return None
         
-        for pattern in self.whatsapp_patterns:
-            matches = re.findall(pattern, html, re.IGNORECASE)
-            if matches:
-                phone = matches[0]
-                if isinstance(phone, tuple):
-                    phone = phone[0]
-                
-                # Clean phone number
-                phone = re.sub(r'[^\d+]', '', phone)
-                
-                # Normalize Indonesian phone numbers
-                if phone.startswith('08'):
-                    phone = '+62' + phone[1:]
-                elif phone.startswith('62') and not phone.startswith('+62'):
-                    phone = '+' + phone
-                elif not phone.startswith('+') and len(phone) >= 10:
-                    # Assume Indonesian number if no country code
-                    if phone.startswith('8'):
-                        phone = '+62' + phone
-                
-                # Validate phone number length
-                if len(phone) >= 12 and len(phone) <= 16:  # Valid international phone length
-                    return phone
-        
-        return None
-    
-    def _extract_email(self, html: str) -> Optional[str]:
-        """Extract email address from HTML."""
-        
-        matches = re.findall(self.email_pattern, html, re.IGNORECASE)
-        
-        if matches:
-            # Filter out excluded domains
-            valid_emails = []
-            
-            for email in matches:
-                domain = email.split('@')[1].lower()
-                if not any(excluded in domain for excluded in self.excluded_email_domains):
-                    valid_emails.append(email.lower())
-            
-            if valid_emails:
-                # Return the first valid email
-                return valid_emails[0]
-        
-        return None
-    
-    def _extract_instagram(self, html: str) -> Optional[str]:
-        """Extract Instagram handle from HTML."""
-        
-        for pattern in self.instagram_patterns:
-            matches = re.findall(pattern, html, re.IGNORECASE)
-            if matches:
-                handle = matches[0]
-                
-                # Clean handle
-                handle = re.sub(r'[^\w.]', '', handle)
-                
-                # Validate handle
-                if len(handle) > 2 and not handle.isdigit() and '.' not in handle[:3]:
-                    return f"@{handle}"
-        
-        return None
-    
-    def _extract_tiktok(self, html: str) -> Optional[str]:
-        """Extract TikTok handle from HTML."""
-        
-        for pattern in self.tiktok_patterns:
-            matches = re.findall(pattern, html, re.IGNORECASE)
-            if matches:
-                handle = matches[0]
-                
-                # Clean handle
-                handle = re.sub(r'[^\w.]', '', handle)
-                
-                # Validate handle
-                if len(handle) > 2 and not handle.isdigit():
-                    return f"@{handle}"
-        
-        return None
-    
-    def _extract_line(self, html: str) -> Optional[str]:
-        """Extract Line ID from HTML."""
-        
-        line_patterns = [
-            r'line[:\s]*@?([a-zA-Z0-9_.]+)',
-            r'line\.me/ti/p/([a-zA-Z0-9_.]+)',
-            r'line id[:\s]*@?([a-zA-Z0-9_.]+)'
-        ]
-        
-        for pattern in line_patterns:
-            matches = re.findall(pattern, html, re.IGNORECASE)
-            if matches:
-                line_id = matches[0]
-                
-                # Clean Line ID
-                line_id = re.sub(r'[^\w.]', '', line_id)
-                
-                # Validate Line ID
-                if len(line_id) > 2 and not line_id.isdigit():
-                    return line_id
-        
-        return None
-    
-    def _extract_telegram(self, html: str) -> Optional[str]:
-        """Extract Telegram handle from HTML."""
-        
-        telegram_patterns = [
-            r't\.me/([a-zA-Z0-9_.]+)',
-            r'telegram[:\s]*@?([a-zA-Z0-9_.]+)',
-            r'tg[:\s]*@?([a-zA-Z0-9_.]+)'
-        ]
-        
-        for pattern in telegram_patterns:
-            matches = re.findall(pattern, html, re.IGNORECASE)
-            if matches:
-                handle = matches[0]
-                
-                # Clean handle
-                handle = re.sub(r'[^\w.]', '', handle)
-                
-                # Validate handle
-                if len(handle) > 2 and not handle.isdigit():
-                    return f"@{handle}"
-        
-        return None
-    
-    async def find_detail_page_url(self, page, creator_username: str, base_url: str) -> Optional[str]:
-        """Find the detail page URL for a creator."""
-        
-        # Common URL patterns for creator profiles
-        url_patterns = [
-            f"{base_url}/creator/{creator_username}",
-            f"{base_url}/profile/{creator_username}",
-            f"{base_url}/user/{creator_username}",
-            f"https://www.tokopedia.com/{creator_username}",
-            f"{base_url}/affiliate/{creator_username}",
-            f"{base_url}/influencer/{creator_username}"
-        ]
-        
-        # Try to find clickable elements first
-        clickable_selectors = [
-            f"a[href*='{creator_username}']",
-            f"[data-username='{creator_username}']",
-            f"[data-creator='{creator_username}']",
-            "tr td:first-child a",
-            "tr td a",
-            ".creator-name a",
-            ".username a",
-            "[data-testid*='creator'] a"
-        ]
-        
-        # Look for clickable elements
-        for selector in clickable_selectors:
+        # Try each selector strategy
+        for selector in self.WHATSAPP_SELECTORS:
             try:
-                elements = await page.query_selector_all(selector)
-                if elements:
-                    href = await elements[0].get_attribute('href')
-                    if href and href not in ('#', 'javascript:void(0)', ''):
-                        # Convert relative URLs to absolute
-                        if href.startswith('/'):
-                            href = base_url + href
-                        return href
-            except:
+                elements = doc.xpath(selector)
+                
+                for element in elements:
+                    # Extract from href attribute
+                    if element.tag == 'a':
+                        href = element.get('href', '')
+                        
+                        # Extract from wa.me links
+                        if 'wa.me' in href or 'whatsapp' in href:
+                            # Extract number from URL
+                            number = self._extract_number_from_url(href)
+                            if number:
+                                return self._normalize_phone_number(number)
+                        
+                        # Extract from tel: links
+                        if href.startswith('tel:'):
+                            number = href.replace('tel:', '').strip()
+                            return self._normalize_phone_number(number)
+                    
+                    # Extract from text content
+                    text = element.text_content().strip()
+                    number = self._extract_phone_from_text(text)
+                    if number:
+                        return number
+                    
+            except Exception as e:
+                # Continue to next selector if this one fails
                 continue
         
-        # Try common URL patterns
-        for url in url_patterns:
+        # Fallback: Search entire HTML for phone patterns
+        number = self._extract_phone_from_text(html_content)
+        return number
+    
+    def extract_email(self, html_content: str) -> Optional[str]:
+        """
+        Extract email address from HTML content
+        
+        Args:
+            html_content: HTML string to parse
+            
+        Returns:
+            Email address, or None if not found
+        """
+        try:
+            doc = lxml_html.fromstring(html_content)
+        except Exception as e:
+            print(f"Error parsing HTML for email extraction: {e}")
+            return None
+        
+        # Try each selector strategy
+        for selector in self.EMAIL_SELECTORS:
             try:
-                # Test if URL exists by making a quick navigation
-                response = await page.goto(url, wait_until='domcontentloaded', timeout=10000)
-                if response and response.status < 400:
-                    return url
-            except:
+                elements = doc.xpath(selector)
+                
+                for element in elements:
+                    # Extract from href attribute
+                    if element.tag == 'a':
+                        href = element.get('href', '')
+                        
+                        # Extract from mailto: links
+                        if href.startswith('mailto:'):
+                            email = href.replace('mailto:', '').strip()
+                            # Remove query parameters
+                            email = email.split('?')[0]
+                            if self._validate_email(email):
+                                return email.lower()
+                    
+                    # Extract from text content
+                    text = element.text_content().strip()
+                    email = self._extract_email_from_text(text)
+                    if email:
+                        return email
+                    
+            except Exception as e:
+                # Continue to next selector if this one fails
                 continue
+        
+        # Fallback: Search entire HTML for email patterns
+        email = self._extract_email_from_text(html_content)
+        return email
+    
+    def extract_contacts(self, html_content: str) -> Dict[str, Optional[str]]:
+        """
+        Extract both WhatsApp and Email from HTML content
+        
+        Args:
+            html_content: HTML string to parse
+            
+        Returns:
+            Dictionary with 'whatsapp' and 'email' keys
+        """
+        return {
+            'whatsapp': self.extract_whatsapp(html_content),
+            'email': self.extract_email(html_content)
+        }
+    
+    def _extract_number_from_url(self, url: str) -> Optional[str]:
+        """Extract phone number from WhatsApp URL"""
+        # wa.me/62812345678
+        # api.whatsapp.com/send?phone=62812345678
+        
+        # Try to extract from wa.me
+        if 'wa.me/' in url:
+            parts = url.split('wa.me/')
+            if len(parts) > 1:
+                number = parts[1].split('?')[0].split('/')[0]
+                return number
+        
+        # Try to extract from phone parameter
+        if 'phone=' in url:
+            parts = url.split('phone=')
+            if len(parts) > 1:
+                number = parts[1].split('&')[0]
+                return number
         
         return None
     
-    async def navigate_to_detail_page(self, page, creator_username: str, base_url: str) -> bool:
-        """Navigate to creator detail page."""
+    def _extract_phone_from_text(self, text: str) -> Optional[str]:
+        """Extract phone number from text using regex"""
+        # Remove common separators for better matching
+        clean_text = text.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
         
-        try:
-            # First try to find and click a link on current page
-            clickable_selectors = [
-                f"a[href*='{creator_username}']",
-                "tr td:first-child a",
-                "tr td a",
-                ".creator-name a",
-                ".username a"
-            ]
-            
-            for selector in clickable_selectors:
-                try:
-                    elements = await page.query_selector_all(selector)
-                    if elements:
-                        logger.info(f"Clicking element: {selector}")
-                        await elements[0].click()
-                        await asyncio.sleep(3)
-                        return True
-                except Exception as e:
-                    logger.debug(f"Could not click {selector}: {e}")
-                    continue
-            
-            # If clicking failed, try direct navigation
-            detail_url = await self.find_detail_page_url(page, creator_username, base_url)
-            if detail_url:
-                logger.info(f"Navigating to: {detail_url}")
-                await page.goto(detail_url)
-                await asyncio.sleep(3)
-                return True
-            
-            logger.warning(f"Could not find detail page for {creator_username}")
+        match = self.phone_regex.search(clean_text)
+        if match:
+            number = match.group(0)
+            return self._normalize_phone_number(number)
+        
+        return None
+    
+    def _extract_email_from_text(self, text: str) -> Optional[str]:
+        """Extract email from text using regex"""
+        match = self.email_regex.search(text)
+        if match:
+            email = match.group(0).lower()
+            if self._validate_email(email):
+                return email
+        
+        return None
+    
+    def _normalize_phone_number(self, number: str) -> str:
+        """
+        Normalize phone number to Indonesian format
+        
+        Converts various formats to +62 format:
+        - 08xxx -> +628xxx
+        - 62xxx -> +62xxx
+        - 0xxx -> +62xxx
+        """
+        # Remove all non-digit characters
+        digits = re.sub(r'\D', '', number)
+        
+        # Handle different formats
+        if digits.startswith('62'):
+            return f"+{digits}"
+        elif digits.startswith('08'):
+            return f"+62{digits[1:]}"
+        elif digits.startswith('8'):
+            return f"+62{digits}"
+        elif digits.startswith('0'):
+            return f"+62{digits[1:]}"
+        else:
+            return f"+{digits}"
+    
+    def _validate_email(self, email: str) -> bool:
+        """Validate email format"""
+        if not email or '@' not in email:
             return False
-            
-        except Exception as e:
-            logger.error(f"Error navigating to detail page for {creator_username}: {e}")
+        
+        # Basic validation
+        parts = email.split('@')
+        if len(parts) != 2:
             return False
+        
+        local, domain = parts
+        if not local or not domain:
+            return False
+        
+        # Check domain has at least one dot
+        if '.' not in domain:
+            return False
+        
+        # Check for common invalid patterns (only for obvious test emails)
+        invalid_patterns = [
+            'test@test.com',
+            'email@email.com',
+            'noreply@',
+            'no-reply@',
+        ]
+        
+        for pattern in invalid_patterns:
+            if pattern in email.lower():
+                return False
+        
+        return True
+
+
+if __name__ == "__main__":
+    # Test the extractor
+    extractor = ContactExtractor()
+    
+    # Test HTML with WhatsApp
+    test_html_wa = """
+    <div class="contact-info">
+        <span>WhatsApp:</span>
+        <a href="https://wa.me/628123456789">+62 812-3456-789</a>
+    </div>
+    """
+    
+    wa = extractor.extract_whatsapp(test_html_wa)
+    print(f"WhatsApp: {wa}")
+    
+    # Test HTML with Email
+    test_html_email = """
+    <div class="contact-info">
+        <span>Email:</span>
+        <a href="mailto:creator@example.com">creator@example.com</a>
+    </div>
+    """
+    
+    email = extractor.extract_email(test_html_email)
+    print(f"Email: {email}")
+    
+    # Test both
+    test_html_both = """
+    <div class="profile">
+        <div class="contact">
+            <p>Hubungi saya:</p>
+            <p>WA: 0812-3456-7890</p>
+            <p>Email: affiliator@gmail.com</p>
+        </div>
+    </div>
+    """
+    
+    contacts = extractor.extract_contacts(test_html_both)
+    print(f"Contacts: {contacts}")

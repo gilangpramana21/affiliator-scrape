@@ -1,0 +1,9 @@
+# Free Proxy List
+# Format: IP:PORT
+# Get from: https://proxyscrape.com/free-proxy-list
+
+# Example Indonesia proxies:
+# 103.147.118.238:8080
+# 182.253.112.194:8080
+
+# Paste free proxies below (if any):

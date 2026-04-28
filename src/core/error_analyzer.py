@@ -306,6 +306,107 @@ class ErrorAnalyzer:
 
         return Action.CONTINUE
 
+    def detect_coba_lagi(self, html: str) -> bool:
+        """
+        Detect "Coba lagi" blocking page from Tokopedia.
+
+        This blocking page appears when:
+        - Cookies are expired or invalid
+        - IP is blocked or has low reputation
+        - Tokopedia detects suspicious activity
+
+        Args:
+            html: Raw HTML string to analyze.
+
+        Returns:
+            True if "Coba lagi" blocking page is detected, False otherwise.
+        """
+        if not html:
+            return False
+
+        # Convert to lowercase for case-insensitive matching
+        content = html.lower()
+
+        # Patterns that indicate "Coba lagi" blocking page
+        coba_lagi_patterns = [
+            "coba lagi",           # Indonesian: "Try again"
+            "try again",           # English version
+            "silakan coba lagi",   # Indonesian: "Please try again"
+            "please try again",    # English: "Please try again"
+            "terjadi kesalahan",   # Indonesian: "An error occurred"
+            "something went wrong" # English: "Something went wrong"
+        ]
+
+        # Check if any pattern exists in the content
+        for pattern in coba_lagi_patterns:
+            if pattern in content:
+                logger.warning(f"'Coba lagi' blocking page detected (pattern: '{pattern}')")
+                return True
+
+        return False
+
+    def detect_cookie_expiration(self, response: Response) -> bool:
+        """
+        Detect cookie expiration by checking for redirects to login page
+        or session expired messages.
+
+        Cookie expiration is indicated by:
+        - Redirect to login page (URL contains /login, /signin, /auth)
+        - Session expired messages in content
+        - Authentication required messages
+
+        Args:
+            response: HTTP response to analyze.
+
+        Returns:
+            True if cookie expiration is detected, False otherwise.
+        """
+        if not response:
+            return False
+
+        # Check for redirect to login page
+        url = response.url.lower()
+        login_url_patterns = [
+            "/login",
+            "/signin",
+            "/sign-in",
+            "/auth",
+            "/authenticate",
+            "/masuk",  # Indonesian: "login"
+        ]
+
+        for pattern in login_url_patterns:
+            if pattern in url:
+                logger.warning(f"Cookie expiration detected: redirect to login page ({response.url})")
+                return True
+
+        # Check for session expired messages in content
+        if response.text:
+            content = response.text.lower()
+
+            session_expired_patterns = [
+                "session expired",
+                "session has expired",
+                "sesi berakhir",        # Indonesian: "session expired"
+                "sesi telah berakhir",  # Indonesian: "session has expired"
+                "login required",
+                "please login",
+                "silakan login",        # Indonesian: "please login"
+                "authentication required",
+                "autentikasi diperlukan",  # Indonesian: "authentication required"
+                "unauthorized",
+                "tidak terotorisasi",   # Indonesian: "unauthorized"
+                "access denied",
+                "akses ditolak",        # Indonesian: "access denied"
+            ]
+
+            for pattern in session_expired_patterns:
+                if pattern in content:
+                    logger.warning(f"Cookie expiration detected: session expired message (pattern: '{pattern}')")
+                    return True
+
+        return False
+
     @staticmethod
     def detect_honeypot_links(html: str) -> List[str]:
         """

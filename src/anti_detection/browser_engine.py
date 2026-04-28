@@ -274,8 +274,16 @@ class BrowserEngine:
             raise RuntimeError("Browser not launched. Call launch() first.")
         with open(cookie_file, "r", encoding="utf-8") as fh:
             raw = json.load(fh)
-        cookies = raw.get("cookies", raw)
-        if isinstance(cookies, list) and cookies:
+        
+        # Handle both formats: list of cookies or dict with "cookies" key
+        if isinstance(raw, list):
+            cookies = raw
+        elif isinstance(raw, dict):
+            cookies = raw.get("cookies", [])
+        else:
+            cookies = []
+        
+        if cookies:
             await self._context.add_cookies(cookies)
 
     @property

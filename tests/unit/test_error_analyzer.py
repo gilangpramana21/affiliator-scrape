@@ -338,3 +338,308 @@ class TestGetRecommendedAction:
         analyzer = ErrorAnalyzer()
         result = analyzer.analyze(make_response(404))
         assert result.recommended_action == Action.RETRY
+
+
+# ---------------------------------------------------------------------------
+# 15.8  "Coba lagi" blocking page detection
+# ---------------------------------------------------------------------------
+
+class TestCobaLagiDetection:
+    """Tests for detect_coba_lagi() method (Task 15.8)."""
+
+    def test_detect_coba_lagi_indonesian(self):
+        """Test detection of Indonesian 'coba lagi' text."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>Coba lagi</h1><p>Silakan coba lagi nanti.</p></body></html>"
+        assert analyzer.detect_coba_lagi(html) is True
+
+    def test_detect_coba_lagi_english(self):
+        """Test detection of English 'try again' text."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>Try Again</h1><p>Please try again later.</p></body></html>"
+        assert analyzer.detect_coba_lagi(html) is True
+
+    def test_detect_silakan_coba_lagi(self):
+        """Test detection of 'silakan coba lagi' phrase."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><p>Silakan coba lagi dalam beberapa menit.</p></body></html>"
+        assert analyzer.detect_coba_lagi(html) is True
+
+    def test_detect_please_try_again(self):
+        """Test detection of 'please try again' phrase."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><p>Please try again in a few minutes.</p></body></html>"
+        assert analyzer.detect_coba_lagi(html) is True
+
+    def test_detect_terjadi_kesalahan(self):
+        """Test detection of 'terjadi kesalahan' (error occurred) text."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h2>Terjadi kesalahan</h2><p>Mohon coba lagi.</p></body></html>"
+        assert analyzer.detect_coba_lagi(html) is True
+
+    def test_detect_something_went_wrong(self):
+        """Test detection of 'something went wrong' text."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h2>Something went wrong</h2><p>Please try again.</p></body></html>"
+        assert analyzer.detect_coba_lagi(html) is True
+
+    def test_case_insensitive_detection(self):
+        """Test that detection is case-insensitive."""
+        analyzer = ErrorAnalyzer()
+        html_upper = "<html><body><h1>COBA LAGI</h1></body></html>"
+        html_mixed = "<html><body><h1>CoBa LaGi</h1></body></html>"
+        assert analyzer.detect_coba_lagi(html_upper) is True
+        assert analyzer.detect_coba_lagi(html_mixed) is True
+
+    def test_normal_page_not_detected(self):
+        """Test that normal pages are not detected as 'coba lagi'."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>Welcome</h1><p>This is a normal page with content.</p></body></html>"
+        assert analyzer.detect_coba_lagi(html) is False
+
+    def test_empty_html_not_detected(self):
+        """Test that empty HTML is not detected as 'coba lagi'."""
+        analyzer = ErrorAnalyzer()
+        assert analyzer.detect_coba_lagi("") is False
+        assert analyzer.detect_coba_lagi(None) is False
+
+    def test_affiliate_page_not_detected(self):
+        """Test that normal affiliate pages are not detected as 'coba lagi'."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>Affiliate Center</h1><div class='creator-list'>Content here</div></body></html>"
+        assert analyzer.detect_coba_lagi(html) is False
+
+    def test_coba_lagi_in_middle_of_page(self):
+        """Test detection when 'coba lagi' appears in the middle of content."""
+        analyzer = ErrorAnalyzer()
+        html = """
+        <html>
+        <body>
+            <div class="header">Header content</div>
+            <div class="main">
+                <p>Some content before</p>
+                <div class="error-message">Coba lagi nanti</div>
+                <p>Some content after</p>
+            </div>
+        </body>
+        </html>
+        """
+        assert analyzer.detect_coba_lagi(html) is True
+
+    def test_multiple_patterns_detected(self):
+        """Test that any of the patterns triggers detection."""
+        analyzer = ErrorAnalyzer()
+        
+        # Test each pattern individually
+        patterns = [
+            "coba lagi",
+            "try again",
+            "silakan coba lagi",
+            "please try again",
+            "terjadi kesalahan",
+            "something went wrong"
+        ]
+        
+        for pattern in patterns:
+            html = f"<html><body><p>{pattern}</p></body></html>"
+            assert analyzer.detect_coba_lagi(html) is True, f"Pattern '{pattern}' should be detected"
+
+    def test_logged_when_detected(self, caplog):
+        """Test that detection is logged."""
+        import logging
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>Coba lagi</h1></body></html>"
+        
+        with caplog.at_level(logging.WARNING, logger="src.core.error_analyzer"):
+            analyzer.detect_coba_lagi(html)
+        
+        assert any("coba lagi" in r.message.lower() for r in caplog.records)
+        assert any("blocking page detected" in r.message.lower() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# 15.9  Cookie expiration detection
+# ---------------------------------------------------------------------------
+
+class TestCookieExpirationDetection:
+    """Tests for detect_cookie_expiration() method (Task 15.9)."""
+
+    def test_detect_redirect_to_login(self):
+        """Test detection of redirect to /login page."""
+        analyzer = ErrorAnalyzer()
+        response = make_response(302, url="https://affiliate-id.tokopedia.com/login")
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_redirect_to_signin(self):
+        """Test detection of redirect to /signin page."""
+        analyzer = ErrorAnalyzer()
+        response = make_response(302, url="https://affiliate-id.tokopedia.com/signin")
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_redirect_to_auth(self):
+        """Test detection of redirect to /auth page."""
+        analyzer = ErrorAnalyzer()
+        response = make_response(302, url="https://affiliate-id.tokopedia.com/auth")
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_redirect_to_masuk(self):
+        """Test detection of redirect to /masuk (Indonesian login) page."""
+        analyzer = ErrorAnalyzer()
+        response = make_response(302, url="https://affiliate-id.tokopedia.com/masuk")
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_session_expired_message(self):
+        """Test detection of 'session expired' message in content."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>Session Expired</h1><p>Your session has expired. Please login again.</p></body></html>"
+        response = make_response(200, text=html)
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_sesi_berakhir_message(self):
+        """Test detection of Indonesian 'sesi berakhir' message."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>Sesi Berakhir</h1><p>Sesi telah berakhir. Silakan login kembali.</p></body></html>"
+        response = make_response(200, text=html)
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_login_required_message(self):
+        """Test detection of 'login required' message."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><div class='error'>Login required to access this page.</div></body></html>"
+        response = make_response(200, text=html)
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_please_login_message(self):
+        """Test detection of 'please login' message."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><p>Please login to continue.</p></body></html>"
+        response = make_response(200, text=html)
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_silakan_login_message(self):
+        """Test detection of Indonesian 'silakan login' message."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><p>Silakan login untuk melanjutkan.</p></body></html>"
+        response = make_response(200, text=html)
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_authentication_required(self):
+        """Test detection of 'authentication required' message."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h2>Authentication Required</h2></body></html>"
+        response = make_response(401, text=html)
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_unauthorized_message(self):
+        """Test detection of 'unauthorized' message."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>401 Unauthorized</h1><p>You are not authorized to access this resource.</p></body></html>"
+        response = make_response(401, text=html)
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_detect_access_denied_message(self):
+        """Test detection of 'access denied' message."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>Access Denied</h1></body></html>"
+        response = make_response(403, text=html)
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_case_insensitive_url_detection(self):
+        """Test that URL detection is case-insensitive."""
+        analyzer = ErrorAnalyzer()
+        response_upper = make_response(302, url="https://affiliate-id.tokopedia.com/LOGIN")
+        response_mixed = make_response(302, url="https://affiliate-id.tokopedia.com/SignIn")
+        assert analyzer.detect_cookie_expiration(response_upper) is True
+        assert analyzer.detect_cookie_expiration(response_mixed) is True
+
+    def test_case_insensitive_message_detection(self):
+        """Test that message detection is case-insensitive."""
+        analyzer = ErrorAnalyzer()
+        html_upper = "<html><body><h1>SESSION EXPIRED</h1></body></html>"
+        html_mixed = "<html><body><h1>Session Has Expired</h1></body></html>"
+        response_upper = make_response(200, text=html_upper)
+        response_mixed = make_response(200, text=html_mixed)
+        assert analyzer.detect_cookie_expiration(response_upper) is True
+        assert analyzer.detect_cookie_expiration(response_mixed) is True
+
+    def test_normal_page_not_detected(self):
+        """Test that normal pages are not detected as cookie expiration."""
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>Affiliate Center</h1><div class='creator-list'>Content here</div></body></html>"
+        response = make_response(200, url="https://affiliate-id.tokopedia.com/connection/creator", text=html)
+        assert analyzer.detect_cookie_expiration(response) is False
+
+    def test_none_response_not_detected(self):
+        """Test that None response is handled gracefully."""
+        analyzer = ErrorAnalyzer()
+        assert analyzer.detect_cookie_expiration(None) is False
+
+    def test_empty_content_not_detected(self):
+        """Test that empty content without login indicators is not detected."""
+        analyzer = ErrorAnalyzer()
+        response = make_response(200, url="https://affiliate-id.tokopedia.com/connection/creator", text="")
+        assert analyzer.detect_cookie_expiration(response) is False
+
+    def test_login_url_in_middle_of_path(self):
+        """Test detection when login appears in the middle of URL path."""
+        analyzer = ErrorAnalyzer()
+        response = make_response(302, url="https://affiliate-id.tokopedia.com/redirect/login/callback")
+        assert analyzer.detect_cookie_expiration(response) is True
+
+    def test_multiple_patterns_detected(self):
+        """Test that any of the patterns triggers detection."""
+        analyzer = ErrorAnalyzer()
+        
+        # Test URL patterns
+        url_patterns = ["/login", "/signin", "/sign-in", "/auth", "/authenticate", "/masuk"]
+        for pattern in url_patterns:
+            response = make_response(302, url=f"https://example.com{pattern}")
+            assert analyzer.detect_cookie_expiration(response) is True, f"URL pattern '{pattern}' should be detected"
+        
+        # Test message patterns
+        message_patterns = [
+            "session expired",
+            "session has expired",
+            "sesi berakhir",
+            "sesi telah berakhir",
+            "login required",
+            "please login",
+            "silakan login",
+            "authentication required",
+            "autentikasi diperlukan",
+            "unauthorized",
+            "tidak terotorisasi",
+            "access denied",
+            "akses ditolak",
+        ]
+        
+        for pattern in message_patterns:
+            html = f"<html><body><p>{pattern}</p></body></html>"
+            response = make_response(200, text=html)
+            assert analyzer.detect_cookie_expiration(response) is True, f"Message pattern '{pattern}' should be detected"
+
+    def test_logged_when_detected_url(self, caplog):
+        """Test that URL-based detection is logged."""
+        import logging
+        analyzer = ErrorAnalyzer()
+        response = make_response(302, url="https://affiliate-id.tokopedia.com/login")
+        
+        with caplog.at_level(logging.WARNING, logger="src.core.error_analyzer"):
+            analyzer.detect_cookie_expiration(response)
+        
+        assert any("cookie expiration" in r.message.lower() for r in caplog.records)
+        assert any("redirect to login" in r.message.lower() for r in caplog.records)
+
+    def test_logged_when_detected_message(self, caplog):
+        """Test that message-based detection is logged."""
+        import logging
+        analyzer = ErrorAnalyzer()
+        html = "<html><body><h1>Session Expired</h1></body></html>"
+        response = make_response(200, text=html)
+        
+        with caplog.at_level(logging.WARNING, logger="src.core.error_analyzer"):
+            analyzer.detect_cookie_expiration(response)
+        
+        assert any("cookie expiration" in r.message.lower() for r in caplog.records)
+        assert any("session expired message" in r.message.lower() for r in caplog.records)
+

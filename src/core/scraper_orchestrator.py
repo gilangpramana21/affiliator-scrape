@@ -393,6 +393,18 @@ class ScraperOrchestrator:
             page = await self._browser_engine.navigate(url)
             self._traffic_controller.record_request()
 
+            # Check for cookie expiration
+            html = await self._browser_engine.get_html(page)
+            if self._error_analyzer.detect_coba_lagi(html):
+                logger.warning("Cookie expiration detected on list page - prompting user for new cookies")
+                await self._handle_cookie_expiration()
+                # Retry with new cookies
+                page = await self._browser_engine.navigate(url)
+                html = await self._browser_engine.get_html(page)
+                if self._error_analyzer.detect_coba_lagi(html):
+                    logger.error("Cookie expiration still detected after refresh - stopping")
+                    return None
+
             # Wait for dynamic content to load
             await self._wait_for_dynamic_content(page)
             
@@ -554,6 +566,18 @@ class ScraperOrchestrator:
             
             # Wait for dynamic content to load with longer delay for public WiFi
             await asyncio.sleep(5)  # Increased from 2 to 5 seconds for public WiFi
+            
+            # Check for cookie expiration on detail page
+            detail_html = await detail_page.content()
+            if self._error_analyzer.detect_coba_lagi(detail_html):
+                logger.warning("Cookie expiration detected on detail page - prompting user for new cookies")
+                await self._handle_cookie_expiration()
+                # Reload the page with new cookies
+                await detail_page.reload(wait_until="networkidle", timeout=30000)
+                detail_html = await detail_page.content()
+                if self._error_analyzer.detect_coba_lagi(detail_html):
+                    logger.error("Cookie expiration still detected after refresh - skipping this page")
+                    return
             
             # Handle "Coba Lagi" message and public WiFi conditions
             await self._handle_coba_lagi_message(detail_page)
@@ -1020,6 +1044,70 @@ class ScraperOrchestrator:
                     
         except Exception as e:
             logger.warning(f"Error handling public WiFi conditions: {e}")
+
+    async def _handle_cookie_expiration(self) -> None:
+        """Handle cookie expiration by prompting user to refresh cookies.
+        
+        This method:
+        1. Pauses scraping
+        2. Prompts user to refresh cookies
+        3. Waits for new cookies to be provided
+        4. Reloads cookies into browser
+        5. Resumes scraping
+        """
+        logger.warning("="*80)
+        logger.warning("COOKIE EXPIRATION DETECTED")
+        logger.warning("="*80)
+        logger.warning("Cookies have expired or are invalid.")
+        logger.warning("Please refresh your cookies to continue scraping.")
+        logger.warning("")
+        logger.warning("Steps to refresh cookies:")
+        logger.warning("1. Open Chrome and navigate to: https://affiliate-id.tokopedia.com/connection/creator")
+        logger.warning("2. Log in with your Tokopedia account")
+        logger.warning("3. Press F12 to open DevTools")
+        logger.warning("4. Go to Application tab → Cookies → https://affiliate-id.tokopedia.com")
+        logger.warning("5. Copy all cookies and save to: %s", self._config.cookie_file)
+        logger.warning("6. Press Enter in this terminal to continue")
+        logger.warning("="*80)
+        
+        # Pause scraping and wait for user input
+        try:
+            # Use input() to wait for user to press Enter
+            input("\nPress Enter after you have refreshed the cookies...")
+            
+            # Verify cookie file exists and has been updated
+            if not os.path.exists(self._config.cookie_file):
+                logger.error("Cookie file not found: %s", self._config.cookie_file)
+                logger.error("Please ensure cookies are saved to the correct location")
+                raise FileNotFoundError(f"Cookie file not found: {self._config.cookie_file}")
+            
+            # Check if cookie file was recently modified (within last 5 minutes)
+            import time
+            file_mtime = os.path.getmtime(self._config.cookie_file)
+            current_time = time.time()
+            time_diff = current_time - file_mtime
+            
+            if time_diff > 300:  # 5 minutes
+                logger.warning("Cookie file was not recently modified (last modified: %.0f seconds ago)", time_diff)
+                logger.warning("Please ensure you have saved the new cookies")
+                response = input("Continue anyway? (y/n): ")
+                if response.lower() != 'y':
+                    raise RuntimeError("User cancelled cookie refresh")
+            
+            # Reload cookies into browser
+            logger.info("Loading new cookies from: %s", self._config.cookie_file)
+            await self._browser_engine.load_cookies_from_file(self._config.cookie_file)
+            
+            logger.info("✅ Cookies refreshed successfully!")
+            logger.info("Resuming scraping...")
+            
+        except KeyboardInterrupt:
+            logger.warning("Cookie refresh cancelled by user")
+            self._running = False
+            raise
+        except Exception as e:
+            logger.error("Error refreshing cookies: %s", e)
+            raise
 
     def _normalize_phone_number_interactive(self, phone: str) -> Optional[str]:
         """Normalize phone number found via interactive extraction."""

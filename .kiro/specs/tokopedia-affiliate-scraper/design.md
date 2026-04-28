@@ -2,273 +2,186 @@
 
 ## Overview
 
-The Tokopedia Affiliate Scraper is a sophisticated web scraping system designed to extract affiliator data from Tokopedia's Affiliate Center with military-grade anti-detection capabilities. The system achieves 99.9% undetectability through multi-layered evasion techniques including browser fingerprint randomization, behavioral biometrics simulation, TLS fingerprint spoofing, and distributed architecture support.
+The Tokopedia Affiliate Scraper is a web scraping system designed to extract affiliator data from Tokopedia's Affiliate Center using a **Manual Browser + HTTP Requests** architecture. After extensive testing, this approach was chosen because Tokopedia's aggressive anti-bot detection defeats ALL browser automation tools (Playwright, Selenium, Undetected ChromeDriver).
+
+### Design Philosophy: Hybrid Manual + Automated Approach
+
+**Core Insight**: Tokopedia can detect and block ANY automated browser, but cannot detect HTTP requests made with real browser cookies.
+
+**Solution**: 
+1. **Manual Phase**: User opens real Chrome browser, logs in, and exports cookies
+2. **Automated Phase**: Script uses exported cookies with HTTP requests library to scrape data
+
+This hybrid approach achieves 100% reliability by bypassing automation detection entirely.
 
 ### Design Goals
 
-1. **Stealth-First Architecture**: Every component designed with anti-detection as the primary concern
-2. **Resilience**: Graceful handling of failures, CAPTCHAs, and rate limits
-3. **Scalability**: Support for distributed scraping across multiple machines/IPs
+1. **Reliability-First Architecture**: Use proven approach that works (manual cookies + HTTP)
+2. **Simplicity**: Remove complex anti-detection layers that don't work against Tokopedia
+3. **Resilience**: Graceful handling of failures, rate limits, and cookie expiration
 4. **Data Quality**: Robust extraction with validation and deduplication
-5. **Maintainability**: Modular design with clear separation of concerns
+5. **Maintainability**: Simple, understandable codebase without brittle automation
 
-### Key Challenges
+### Key Challenges Solved
 
-1. **Advanced Bot Detection**: Tokopedia/TikTok employ sophisticated anti-bot systems including:
-   - JavaScript challenges (Cloudflare, DataDome)
-   - Canvas/WebGL/Audio fingerprinting
-   - TLS fingerprint analysis
-   - Behavioral biometrics analysis
-   - Traffic pattern anomaly detection
+1. **Browser Automation Detection** ✅ SOLVED
+   - **Problem**: Playwright, Selenium, Undetected ChromeDriver ALL fail
+   - **Symptoms**: "Coba lagi" blocking pages, force-closed browsers, failed row clicks
+   - **Solution**: No browser automation - use manual browser for cookies only
 
-2. **Dynamic Content**: Pages may be JavaScript-rendered requiring full browser emulation
+2. **Dynamic Content** ✅ SOLVED
+   - **Problem**: JavaScript-rendered content
+   - **Solution**: HTTP requests receive fully-rendered HTML from server
 
-3. **Rate Limiting**: Aggressive rate limits require intelligent request pacing
+3. **Rate Limiting** ⚠️ STILL RELEVANT
+   - **Solution**: Intelligent request pacing with jitter
 
-4. **Session Management**: Maintaining valid sessions across long scraping operations
+4. **Session Management** ✅ SIMPLIFIED
+   - **Solution**: Manual cookie extraction, simple cookie refresh mechanism
 
 ## Architecture
 
 ### High-Level Architecture
 
-
 ```mermaid
 graph TB
+    subgraph "Manual Phase (User)"
+        User[User Opens Chrome]
+        Login[User Logs In]
+        DevTools[User Opens DevTools]
+        CopyC[User Copies Cookies]
+    end
+    
     subgraph "Orchestration Layer"
         Scraper[Scraper Orchestrator]
         Config[Configuration Manager]
-        Queue[Work Queue Manager]
+        CookieGuide[Cookie Extraction Guide]
     end
     
     subgraph "Execution Layer"
-        Browser[Browser Engine<br/>Playwright/Puppeteer]
-        HTTP[HTTP Client<br/>curl-impersonate]
-        Stealth[Stealth Plugin Layer]
-    end
-    
-    subgraph "Anti-Detection Layer"
-        Fingerprint[Fingerprint Generator]
-        Behavior[Behavioral Simulator]
-        TLS[TLS Randomizer]
-        Proxy[Proxy Rotator]
+        HTTP[HTTP Client<br/>requests library]
+        CookieValidator[Cookie Validator]
     end
     
     subgraph "Data Processing Layer"
         Parser[HTML Parser]
         Extractor[Affiliator Extractor]
+        ContactExtractor[Contact Extractor]
         Validator[Data Validator]
         Dedup[Deduplicator]
     end
     
     subgraph "Persistence Layer"
-        Session[Session Manager]
+        CookieStore[Cookie Storage<br/>config/cookies.json]
         Store[Data Store]
-        Cache[Distributed Cache<br/>Redis]
     end
     
     subgraph "Control Layer"
         RateLimit[Rate Limiter]
         Traffic[Traffic Controller]
         Error[Error Analyzer]
-        CAPTCHA[CAPTCHA Handler]
     end
     
+    User --> Login
+    Login --> DevTools
+    DevTools --> CopyC
+    CopyC --> CookieStore
+    
     Scraper --> Config
-    Scraper --> Queue
-    Scraper --> Browser
+    Scraper --> CookieGuide
+    Scraper --> CookieValidator
+    CookieValidator --> CookieStore
+    
     Scraper --> HTTP
-    
-    Browser --> Stealth
-    HTTP --> TLS
-    Browser --> Proxy
-    HTTP --> Proxy
-    
-    Stealth --> Fingerprint
-    Stealth --> Behavior
-    
-    Browser --> Parser
     HTTP --> Parser
     Parser --> Extractor
+    Parser --> ContactExtractor
     Extractor --> Validator
     Validator --> Dedup
     Dedup --> Store
     
-    Scraper --> Session
-    Session --> Cache
-    
     Scraper --> RateLimit
     RateLimit --> Traffic
     Scraper --> Error
-    Scraper --> CAPTCHA
     
     Error -.feedback.-> RateLimit
-    Error -.feedback.-> Proxy
 ```
 
 ### Architecture Layers
 
-#### Tab Management Strategy
+#### 1. Manual Phase (User-Driven)
+- **User Opens Chrome**: Real browser (NOT automated)
+- **User Logs In**: Manual authentication to Tokopedia Affiliate Center
+- **User Exports Cookies**: Copy cookies from DevTools → Application → Cookies
+- **Cookie Storage**: Save to `config/cookies.json`
 
-**Challenge**: Tokopedia's anti-bot system triggers custom puzzle CAPTCHAs when affiliator profile links are clicked, but these puzzles disappear after a simple page refresh.
-
-**Solution**: Implement new tab management that mimics natural user behavior:
-
-1. **New Tab Opening**: Open each detail page in a new browser tab (not just navigate in the same tab)
-2. **Puzzle Detection**: Check for puzzle presence after page load
-3. **Auto-Refresh**: If puzzle detected, refresh the page once to bypass it
-4. **Verification**: Confirm actual profile data is now visible
-5. **Tab Cleanup**: Always close detail page tabs after extraction
-
-**Implementation**:
-```python
-async def scrape_detail_page(self, browser: Browser, detail_url: str) -> AffiliatorDetail:
-    """Scrape detail page using new tab strategy"""
-    detail_page = await browser.new_page()
-    
-    try:
-        # Navigate to detail page
-        await detail_page.goto(detail_url, wait_until="networkidle")
-        
-        # Wait for dynamic content
-        await asyncio.sleep(2)
-        
-        # Handle Tokopedia puzzle if present
-        if await self.captcha_handler.detect_tokopedia_puzzle(detail_page):
-            success = await self.captcha_handler.solve_tokopedia_puzzle(detail_page)
-            if not success:
-                raise PuzzleBypassError("Failed to bypass Tokopedia puzzle")
-        
-        # Extract data
-        html = await detail_page.content()
-        return self.extractor.extract_detail_page(html)
-        
-    finally:
-        # Always close the tab
-        await detail_page.close()
-```
-
-**Benefits**:
-- Mimics natural user behavior (opening links in new tabs)
-- Isolates puzzle handling per page
-- Prevents puzzle state from affecting other pages
-- Enables automatic puzzle bypass without manual intervention
-
-#### 1. Orchestration Layer
+#### 2. Orchestration Layer
 - **Scraper Orchestrator**: Main controller coordinating all scraping operations
 - **Configuration Manager**: Loads and validates configuration from JSON files
-- **Work Queue Manager**: Distributes work across multiple scraper instances (distributed mode)
+- **Cookie Extraction Guide**: Interactive guide to help users extract cookies
+- **Cookie Validator**: Validates cookie format and checks expiration
 
-#### 2. Execution Layer
-- **Browser Engine**: Headless browser (Playwright/Puppeteer) for JavaScript-heavy pages
-- **HTTP Client**: Lightweight HTTP client (curl-impersonate) for static pages
-- **Stealth Plugin Layer**: Patches browser automation indicators
-
-#### 3. Anti-Detection Layer
-- **Fingerprint Generator**: Creates realistic browser fingerprints
-- **Behavioral Simulator**: Simulates human-like interactions
-- **TLS Randomizer**: Randomizes TLS handshake patterns
-- **Proxy Rotator**: Manages proxy pool and rotation strategies
+#### 3. Execution Layer
+- **HTTP Client**: Python `requests` library for HTTP GET/POST
+- **Cookie Validator**: Checks cookie validity before scraping starts
 
 #### 4. Data Processing Layer
 - **HTML Parser**: Parses HTML into queryable DOM (using lxml or BeautifulSoup)
 - **Affiliator Extractor**: Extracts structured data using CSS/XPath selectors
+- **Contact Extractor**: Specialized extractor for WhatsApp/Email from detail pages
 - **Data Validator**: Validates extracted data against schemas
 - **Deduplicator**: Prevents duplicate records
 
 #### 5. Persistence Layer
-- **Session Manager**: Manages cookies, localStorage, and session state
+- **Cookie Storage**: Saves cookies to `config/cookies.json`
 - **Data Store**: Saves results to JSON/CSV
-- **Distributed Cache**: Redis for distributed coordination
 
 #### 6. Control Layer
 - **Rate Limiter**: Enforces request delays with jitter
 - **Traffic Controller**: Enforces hourly/daily limits and quiet hours
-- **Error Analyzer**: Detects bot detection triggers and adjusts behavior
-- **CAPTCHA Handler**: Detects and solves CAPTCHAs
+- **Error Analyzer**: Detects blocking and adjusts behavior
 
-### Tab Management Strategy
-
-**Challenge**: Tokopedia's anti-bot system triggers custom puzzle CAPTCHAs when affiliator profile links are clicked, but these puzzles disappear after a simple page refresh.
-
-**Solution**: Implement new tab management that mimics natural user behavior:
-
-1. **New Tab Opening**: Open each detail page in a new browser tab (not just navigate in the same tab)
-2. **Puzzle Detection**: Check for puzzle presence after page load
-3. **Auto-Refresh**: If puzzle detected, refresh the page once to bypass it
-4. **Verification**: Confirm actual profile data is now visible
-5. **Tab Cleanup**: Always close detail page tabs after extraction
-
-**Implementation**:
-```python
-async def scrape_detail_page(self, browser: Browser, detail_url: str) -> AffiliatorDetail:
-    """Scrape detail page using new tab strategy"""
-    detail_page = await browser.new_page()
-    
-    try:
-        # Navigate to detail page
-        await detail_page.goto(detail_url, wait_until="networkidle")
-        
-        # Wait for dynamic content
-        await asyncio.sleep(2)
-        
-        # Handle Tokopedia puzzle if present
-        if await self.captcha_handler.detect_tokopedia_puzzle(detail_page):
-            success = await self.captcha_handler.solve_tokopedia_puzzle(detail_page)
-            if not success:
-                raise PuzzleBypassError("Failed to bypass Tokopedia puzzle")
-        
-        # Extract data
-        html = await detail_page.content()
-        return self.extractor.extract_detail_page(html)
-        
-    finally:
-        # Always close the tab
-        await detail_page.close()
-```
-
-**Benefits**:
-- Mimics natural user behavior (opening links in new tabs)
-- Isolates puzzle handling per page
-- Prevents puzzle state from affecting other pages
-- Enables automatic puzzle bypass without manual intervention
-
+### Workflow Sequence
 
 ```mermaid
 sequenceDiagram
     participant User
+    participant Chrome as Chrome Browser
     participant Scraper
     participant Config
-    participant RateLimit
-    participant Browser
-    participant Stealth
+    participant HTTP as HTTP Client
     participant Parser
-    participant Extractor
     participant Store
     
-    User->>Scraper: Start scraping
-    Scraper->>Config: Load configuration
-    Config-->>Scraper: Config loaded
+    User->>Chrome: Open & Login
+    Chrome-->>User: Logged in
+    User->>Chrome: Open DevTools
+    User->>Chrome: Copy Cookies
+    User->>Config: Save to cookies.json
     
-    Scraper->>Stealth: Generate fingerprint
-    Stealth-->>Scraper: Fingerprint ready
+    User->>Scraper: Start scraping
+    Scraper->>Config: Load cookies
+    Config-->>Scraper: Cookies loaded
+    
+    Scraper->>HTTP: Validate cookies
+    HTTP-->>Scraper: Cookies valid
     
     loop For each page
-        Scraper->>RateLimit: Request permission
-        RateLimit-->>Scraper: Wait + jitter
-        
-        Scraper->>Browser: Navigate to page
-        Browser->>Stealth: Apply stealth patches
-        Stealth-->>Browser: Patches applied
-        Browser-->>Scraper: Page loaded
+        Scraper->>HTTP: GET list page (with cookies)
+        HTTP-->>Scraper: HTML response
         
         Scraper->>Parser: Parse HTML
-        Parser-->>Scraper: DOM structure
+        Parser-->>Scraper: Affiliator list
         
-        Scraper->>Extractor: Extract affiliators
-        Extractor-->>Scraper: Affiliator data
-        
-        Scraper->>Store: Save data
-        Store-->>Scraper: Saved
+        loop For each affiliator
+            Scraper->>HTTP: GET detail page (with cookies)
+            HTTP-->>Scraper: HTML response
+            
+            Scraper->>Parser: Parse HTML
+            Parser-->>Scraper: Contact info
+            
+            Scraper->>Store: Save data
+        end
     end
     
     Scraper-->>User: Scraping complete
@@ -302,171 +215,107 @@ class ScraperOrchestrator:
 **Key Algorithms**:
 - **Main Scraping Loop**:
   1. Load configuration and validate
-  2. Initialize all components (browser, session, rate limiter, etc.)
-  3. Generate browser fingerprint for this session
+  2. Load and validate cookies from file
+  3. Initialize HTTP client with cookies
   4. Scrape creator list pages (with pagination)
   5. For each affiliator, scrape detail page
   6. Validate, deduplicate, and store data
   7. Handle errors and adjust behavior dynamically
   8. Save checkpoint periodically
-  9. Respect traffic limits and session breaks
+  9. Respect traffic limits
 
-### 2. Browser Engine
+### 2. Manual Cookie Extraction Guide
 
-**Responsibility**: Manages headless browser automation with stealth capabilities.
+**Responsibility**: Interactive guide to help users extract cookies from Chrome DevTools.
 
 **Interface**:
 ```python
-class BrowserEngine:
-    def __init__(self, engine_type: Literal["playwright", "puppeteer"]):
-        """Initialize browser engine"""
+class CookieExtractionGuide:
+    def show_guide(self):
+        """Display step-by-step cookie extraction instructions"""
         
-    async def launch(self, fingerprint: BrowserFingerprint) -> Browser:
-        """Launch browser with fingerprint"""
+    def validate_cookie_format(self, cookie_file: str) -> bool:
+        """Validate cookie file format"""
         
-    async def navigate(self, url: str, wait_for: str = "networkidle") -> Page:
-        """Navigate to URL and wait for page load"""
-        
-    async def get_html(self, page: Page) -> str:
-        """Get page HTML content"""
-        
-    async def simulate_human_behavior(self, page: Page):
-        """Simulate random human interactions"""
-        
-    async def close(self):
-        """Close browser"""
+    def check_cookie_expiration(self, cookies: List[Cookie]) -> bool:
+        """Check if cookies are expired"""
 ```
 
-**Stealth Techniques**:
-- Patch `navigator.webdriver` to undefined
-- Patch `navigator.plugins` with realistic plugin list
-- Patch `navigator.languages` to match fingerprint
-- Override `chrome.runtime` to undefined
-- Randomize canvas fingerprint using noise injection
-- Randomize WebGL fingerprint
-- Randomize audio context fingerprint
-- Block font fingerprinting attempts
-- Simulate realistic viewport and screen properties
+**Guide Steps**:
+1. Open Google Chrome (NOT automated browser)
+2. Navigate to: `https://affiliate-id.tokopedia.com/connection/creator`
+3. Log in with your Tokopedia account
+4. Press F12 to open DevTools
+5. Go to Application tab → Cookies → `https://affiliate-id.tokopedia.com`
+6. Copy all cookies (or use extension to export)
+7. Save to `config/cookies.json` in format:
+```json
+[
+  {
+    "name": "cookie_name",
+    "value": "cookie_value",
+    "domain": ".tokopedia.com",
+    "path": "/",
+    "httpOnly": true,
+    "secure": true
+  }
+]
+```
 
 ### 3. HTTP Client
 
-**Responsibility**: Lightweight HTTP client for static pages with TLS fingerprint randomization.
+**Responsibility**: Lightweight HTTP client for all requests using manual cookies.
 
 **Interface**:
 ```python
 class HTTPClient:
-    def __init__(self, fingerprint: BrowserFingerprint, proxy: Optional[Proxy]):
-        """Initialize HTTP client with fingerprint and proxy"""
+    def __init__(self, cookies: List[Cookie], proxy: Optional[Proxy] = None):
+        """Initialize HTTP client with cookies and optional proxy"""
         
     async def get(self, url: str, headers: Dict[str, str]) -> Response:
-        """Send GET request"""
+        """Send GET request with cookies"""
         
     async def post(self, url: str, data: Dict, headers: Dict[str, str]) -> Response:
-        """Send POST request"""
+        """Send POST request with cookies"""
         
-    def set_cookies(self, cookies: List[Cookie]):
-        """Set cookies for requests"""
+    def validate_cookies(self) -> bool:
+        """Test if cookies are valid by making test request"""
         
-    def get_cookies(self) -> List[Cookie]:
-        """Get current cookies"""
+    def refresh_cookies(self, new_cookies: List[Cookie]):
+        """Update cookies (when user refreshes them)"""
 ```
 
 **Implementation Notes**:
-- Use `curl-impersonate` or `tls-client` library for TLS fingerprint randomization
-- Mimic Chrome/Firefox/Safari TLS handshakes
-- Support HTTP/2 with realistic SETTINGS frames
+- Use Python `requests` library (simple and reliable)
+- Include realistic browser headers (User-Agent, Accept, Referer)
 - Automatic retry with exponential backoff
 - Follow redirects up to 5 hops
+- Detect "Coba lagi" blocking pages and report cookie expiration
 
-### 4. Fingerprint Generator
+### 4. Cookie Validator
 
-**Responsibility**: Generates realistic browser fingerprints that remain consistent within a session.
-
-**Interface**:
-```python
-class FingerprintGenerator:
-    def generate(self) -> BrowserFingerprint:
-        """Generate a new random fingerprint"""
-        
-    def load(self, fingerprint_id: str) -> BrowserFingerprint:
-        """Load a saved fingerprint"""
-        
-    def save(self, fingerprint: BrowserFingerprint) -> str:
-        """Save fingerprint and return ID"""
-```
-
-**BrowserFingerprint Structure**:
-```python
-@dataclass
-class BrowserFingerprint:
-    user_agent: str
-    platform: str  # Windows, macOS, Linux
-    browser: str  # Chrome, Firefox, Safari
-    browser_version: str
-    screen_resolution: Tuple[int, int]
-    viewport_size: Tuple[int, int]
-    timezone: str  # Asia/Jakarta, Asia/Makassar, Asia/Jayapura
-    timezone_offset: int
-    language: str  # id-ID
-    languages: List[str]  # ["id-ID", "id", "en-US", "en"]
-    color_depth: int  # 24
-    pixel_ratio: float  # 1.0, 1.5, 2.0
-    hardware_concurrency: int  # CPU cores
-    device_memory: int  # GB
-    sec_ch_ua: str
-    sec_ch_ua_mobile: str
-    sec_ch_ua_platform: str
-    plugins: List[str]
-    webgl_vendor: str
-    webgl_renderer: str
-```
-
-**Fingerprint Generation Algorithm**:
-1. Select random browser (Chrome 70%, Firefox 20%, Safari 10%)
-2. Select random OS matching browser distribution
-3. Generate matching User-Agent string
-4. Select random screen resolution from common resolutions
-5. Calculate viewport size (screen - browser chrome)
-6. Select Indonesian timezone (WIB 60%, WITA 25%, WIT 15%)
-7. Generate sec-ch-ua headers matching browser version
-8. Select WebGL vendor/renderer matching GPU distribution
-9. Ensure all fingerprint components are internally consistent
-
-### 5. Behavioral Simulator
-
-**Responsibility**: Simulates human-like interactions to evade behavioral biometrics detection.
+**Responsibility**: Validates cookie format and checks if cookies are still valid.
 
 **Interface**:
 ```python
-class BehavioralSimulator:
-    async def move_mouse(self, page: Page, from_pos: Point, to_pos: Point):
-        """Simulate realistic mouse movement using Bezier curves"""
+class CookieValidator:
+    def validate_format(self, cookie_file: str) -> ValidationResult:
+        """Validate cookie file format"""
         
-    async def scroll_page(self, page: Page, scroll_pattern: str = "random"):
-        """Simulate realistic scrolling behavior"""
+    def check_expiration(self, cookies: List[Cookie]) -> bool:
+        """Check if cookies are expired"""
         
-    async def click_element(self, page: Page, selector: str):
-        """Simulate realistic click with random position within element"""
-        
-    async def type_text(self, page: Page, selector: str, text: str):
-        """Simulate realistic typing with variable speed"""
-        
-    async def idle_behavior(self, page: Page, duration: float):
-        """Simulate idle human behavior (random mouse movements, pauses)"""
-        
-    async def think_time(self, min_seconds: float = 3, max_seconds: float = 8):
-        """Simulate human thinking time"""
+    def test_cookies(self, cookies: List[Cookie]) -> bool:
+        """Test cookies by making request to Tokopedia"""
 ```
 
-**Behavioral Patterns**:
-- **Mouse Movement**: Bezier curves with acceleration/deceleration, occasional overshoot and correction
-- **Scrolling**: Variable speed, occasional scroll-up, pauses at "interesting" content
-- **Clicking**: Random position within clickable area (not always center), occasional misclick
-- **Typing**: 200-400ms per character with random variations, occasional backspace
-- **Idle**: Random small mouse movements, occasional hover over elements
-- **Think Time**: Random delays between actions (3-8 seconds)
+**Validation Rules**:
+- Cookie file must be valid JSON
+- Each cookie must have: name, value, domain
+- Domain must match `.tokopedia.com` or `affiliate-id.tokopedia.com`
+- Test request to affiliate page must return 200 (not redirect to login)
 
-### 6. Rate Limiter
+### 5. Rate Limiter
 
 **Responsibility**: Controls request frequency with jitter to avoid detection.
 
@@ -495,9 +344,9 @@ async def wait(self):
     await asyncio.sleep(actual_delay)
 ```
 
-### 7. Traffic Controller
+### 6. Traffic Controller
 
-**Responsibility**: Enforces hourly/daily limits and implements session breaks.
+**Responsibility**: Enforces hourly/daily limits.
 
 **Interface**:
 ```python
@@ -513,23 +362,14 @@ class TrafficController:
         
     def record_request(self):
         """Record a request for rate limiting"""
-        
-    def should_take_break(self) -> bool:
-        """Check if session break is needed"""
-        
-    async def take_break(self):
-        """Pause for configured break duration"""
 ```
 
 **Traffic Patterns**:
 - Hourly limit: max 50 requests/hour (configurable)
 - Daily limit: max 500 requests/day (configurable)
-- Session duration: max 2 hours before mandatory break
-- Break duration: 15-30 minutes (random)
-- Quiet hours: 1 AM - 6 AM (no scraping)
 - Request distribution: evenly spread across time window
 
-### 8. Proxy Rotator
+### 7. Proxy Rotator (Optional)
 
 **Responsibility**: Manages proxy pool and rotation strategies.
 
@@ -560,7 +400,7 @@ class ProxyRotator:
 - `random`: Select random proxy from pool
 - `least_used`: Select proxy with fewest recent uses
 
-### 9. HTML Parser
+### 8. HTML Parser
 
 **Responsibility**: Parses HTML into queryable DOM structure.
 
@@ -589,7 +429,7 @@ class HTMLParser:
 - Automatic whitespace normalization (trim, collapse spaces)
 - Support for both CSS selectors and XPath
 
-### 10. Affiliator Extractor
+### 9. Affiliator Extractor
 
 **Responsibility**: Extracts structured affiliator data from parsed HTML.
 
@@ -629,7 +469,7 @@ SELECTORS = {
 }
 ```
 
-### 11. Data Validator
+### 10. Data Validator
 
 **Responsibility**: Validates extracted data against schemas and business rules.
 
@@ -653,9 +493,9 @@ class DataValidator:
 - `tingkat_interaksi`: percentage 0-100
 - `nomor_kontak`: Indonesian phone format (^(08|\+62)\d{8,13}$)
 
-### 12. Session Manager
+### 11. Session Manager (Simplified)
 
-**Responsibility**: Manages cookies, localStorage, and session state.
+**Responsibility**: Manages cookies loaded from file.
 
 **Interface**:
 ```python
@@ -663,26 +503,17 @@ class SessionManager:
     def __init__(self):
         """Initialize empty session"""
         
-    def set_cookies(self, cookies: List[Cookie]):
-        """Set cookies"""
+    def load_cookies(self, filepath: str) -> List[Cookie]:
+        """Load cookies from file"""
         
-    def get_cookies(self) -> List[Cookie]:
-        """Get current cookies"""
+    def save_cookies(self, cookies: List[Cookie], filepath: str):
+        """Save cookies to file"""
         
-    def save_session(self, filepath: str):
-        """Save session to file"""
-        
-    def load_session(self, filepath: str):
-        """Load session from file"""
-        
-    def is_expired(self) -> bool:
-        """Check if session is expired"""
-        
-    def clear(self):
-        """Clear all session data"""
+    def is_expired(self, cookies: List[Cookie]) -> bool:
+        """Check if cookies are expired"""
 ```
 
-### 13. Data Store
+### 12. Data Store
 
 **Responsibility**: Persists scraped data to JSON/CSV files.
 
@@ -706,101 +537,7 @@ class DataStore:
 - **JSON**: Array of objects, pretty-printed, UTF-8 encoding
 - **CSV**: Headers, quoted strings, UTF-8 encoding with BOM
 
-### 14. CAPTCHA Handler
-
-**Responsibility**: Detects and solves CAPTCHAs, including Tokopedia's custom puzzle CAPTCHA.
-
-**Interface**:
-```python
-class CAPTCHAHandler:
-    def __init__(self, solver_type: str, api_key: Optional[str]):
-        """Initialize CAPTCHA handler"""
-        
-    async def detect(self, page: Page) -> Optional[CAPTCHAType]:
-        """Detect CAPTCHA on page"""
-        
-    async def solve(self, page: Page, captcha_type: CAPTCHAType) -> bool:
-        """Solve detected CAPTCHA"""
-        
-    async def detect_tokopedia_puzzle(self, page: Page) -> bool:
-        """Detect Tokopedia's custom puzzle CAPTCHA"""
-        
-    async def solve_tokopedia_puzzle(self, page: Page) -> bool:
-        """Solve Tokopedia puzzle by refreshing the page"""
-```
-
-**CAPTCHA Types**:
-- reCAPTCHA v2
-- reCAPTCHA v3
-- hCaptcha
-- Image CAPTCHA
-- Tokopedia Custom Puzzle
-
-**Solving Strategies**:
-- `manual`: Pause and wait for user input
-- `2captcha`: Use 2Captcha API
-- `anticaptcha`: Use Anti-Captcha API
-- `tokopedia_refresh`: Auto-refresh for Tokopedia puzzles
-
-**Tokopedia Puzzle Detection**:
-The handler detects Tokopedia's custom puzzle CAPTCHA by looking for:
-- Puzzle-specific DOM elements or CSS classes
-- Absence of expected profile data elements
-- Specific page patterns that indicate puzzle presence
-- JavaScript-rendered puzzle components
-
-**Tokopedia Puzzle Solving Algorithm**:
-```python
-async def solve_tokopedia_puzzle(self, page: Page) -> bool:
-    """Solve Tokopedia puzzle by refreshing"""
-    max_attempts = 3
-    
-    for attempt in range(max_attempts):
-        # Wait for page to fully load
-        await asyncio.sleep(2)
-        
-        # Check if puzzle is present
-        if not await self.detect_tokopedia_puzzle(page):
-            return True  # No puzzle, success
-        
-        logger.info(f"Tokopedia puzzle detected, refreshing (attempt {attempt + 1})")
-        
-        # Refresh the page
-        await page.reload(wait_until="networkidle")
-        
-        # Wait for content to load
-        await asyncio.sleep(3)
-        
-        # Check if puzzle is gone and profile data is visible
-        if await self._verify_profile_data_visible(page):
-            logger.info("Tokopedia puzzle bypassed successfully")
-            return True
-    
-    logger.warning("Failed to bypass Tokopedia puzzle after all attempts")
-    return False
-
-async def _verify_profile_data_visible(self, page: Page) -> bool:
-    """Verify that actual profile data is visible (not puzzle)"""
-    # Look for expected profile elements
-    profile_indicators = [
-        "div.creator-profile",
-        "span.follower-count", 
-        "div.contact-info",
-        "div.stats-container"
-    ]
-    
-    for selector in profile_indicators:
-        try:
-            element = await page.wait_for_selector(selector, timeout=2000)
-            if element:
-                return True
-        except:
-            continue
-    
-    return False
-```
-
-### 15. Error Analyzer
+### 13. Error Analyzer
 
 **Responsibility**: Analyzes error responses and adjusts scraper behavior.
 
@@ -808,25 +545,51 @@ async def _verify_profile_data_visible(self, page: Page) -> bool:
 ```python
 class ErrorAnalyzer:
     def analyze(self, response: Response) -> ErrorAnalysis:
-        """Analyze response for bot detection signals"""
+        """Analyze response for blocking signals"""
+        
+    def detect_coba_lagi(self, html: str) -> bool:
+        """Detect 'Coba lagi' blocking page"""
         
     def should_slow_down(self) -> bool:
         """Check if scraper should slow down"""
         
-    def should_pause(self) -> bool:
-        """Check if scraper should pause"""
+    def should_refresh_cookies(self) -> bool:
+        """Check if cookies need refresh"""
         
     def get_recommended_action(self) -> Action:
         """Get recommended action based on error pattern"""
 ```
 
 **Error Patterns**:
-- 403 Forbidden → Potential bot detection
+- "Coba lagi" page → Cookies expired, need refresh
+- 403 Forbidden → Potential blocking
 - 429 Too Many Requests → Rate limit hit
 - Multiple 403/429 → Pause 5-15 minutes
-- Redirect loops → Abort
-- Empty content → Retry with browser engine
-- Slow response times → Slow down requests
+- Redirect to login → Cookies invalid
+- Empty content → Retry
+
+### 14. Deduplicator
+
+**Responsibility**: Prevents duplicate records based on username.
+
+**Interface**:
+```python
+class Deduplicator:
+    def add(self, data: AffiliatorData) -> bool:
+        """Add data if not duplicate, return True if added"""
+        
+    def is_duplicate(self, username: str) -> bool:
+        """Check if username already exists"""
+        
+    def get_all(self) -> List[AffiliatorData]:
+        """Get all unique affiliators"""
+        
+    def get_unique_count(self) -> int:
+        """Get count of unique affiliators"""
+        
+    def get_duplicate_count(self) -> int:
+        """Get count of duplicates found"""
+```
 
 ## Data Models
 
@@ -863,8 +626,12 @@ class AffiliatorData:
 class Configuration:
     """Scraper configuration"""
     # URLs
-    base_url: str = "https://affiliate.tokopedia.com"
-    list_page_url: str = "/creator/list"
+    base_url: str = "https://affiliate-id.tokopedia.com"
+    list_page_url: str = "/connection/creator"
+    
+    # Cookie settings
+    cookie_file: str = "config/cookies.json"
+    require_cookie_file: bool = True
     
     # Rate limiting
     min_delay: float = 2.0
@@ -874,29 +641,20 @@ class Configuration:
     # Traffic control
     hourly_limit: int = 50
     daily_limit: int = 500
-    max_session_duration: int = 7200  # 2 hours in seconds
-    break_duration_min: int = 900  # 15 minutes
-    break_duration_max: int = 1800  # 30 minutes
-    quiet_hours: List[Tuple[int, int]] = [(1, 6)]  # 1 AM - 6 AM
     
     # Request settings
     request_timeout: int = 30
     max_retries: int = 3
     max_redirects: int = 5
     
-    # Browser settings
-    browser_engine: str = "playwright"  # or "puppeteer"
-    headless: bool = True
-    use_stealth: bool = True
+    # Headers
+    user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    accept_language: str = "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
     
-    # Proxy settings
+    # Proxy settings (optional)
     proxies: List[ProxyConfig] = field(default_factory=list)
     proxy_rotation_strategy: str = "per_session"
     proxy_rotation_interval: int = 10  # for per_n_requests strategy
-    
-    # CAPTCHA settings
-    captcha_solver: str = "manual"  # manual, 2captcha, anticaptcha
-    captcha_api_key: Optional[str] = None
     
     # Output settings
     output_format: str = "json"  # json or csv
@@ -908,10 +666,9 @@ class Configuration:
     log_level: str = "INFO"
     log_file: str = "logs/scraper.log"
     
-    # Distributed mode
-    distributed: bool = False
-    redis_url: Optional[str] = None
-    instance_id: Optional[str] = None
+    # Error handling
+    max_errors_before_stop: int = 10
+    max_pages_per_run: int = 100
     
     @classmethod
     def from_file(cls, filepath: str) -> "Configuration":
@@ -984,53 +741,21 @@ class Checkpoint:
 - **Rationale**: Excellent ecosystem for web scraping, async support, type hints
 - **Key Libraries**:
   - `asyncio`: Asynchronous I/O for concurrent operations
-  - `aiohttp`: Async HTTP client
+  - `requests`: Simple, reliable HTTP client
   - `dataclasses`: Clean data models
 
-#### Playwright
-- **Rationale**: Modern browser automation with excellent stealth capabilities
+#### requests
+- **Rationale**: Simple, battle-tested HTTP library
 - **Features**:
-  - Multi-browser support (Chromium, Firefox, WebKit)
-  - Built-in network interception
-  - Screenshot and video recording for debugging
-  - Excellent documentation
-- **Stealth Plugin**: `playwright-stealth` or custom patches
-
-#### Alternative: Puppeteer (Node.js)
-- **Rationale**: If Python ecosystem is insufficient
-- **Stealth Plugin**: `puppeteer-extra-plugin-stealth`
-
-#### curl-impersonate
-- **Rationale**: Perfect TLS fingerprint mimicry
-- **Features**:
-  - Mimics Chrome/Firefox/Safari TLS handshakes
-  - HTTP/2 support with realistic SETTINGS
-  - Can be used via Python bindings or subprocess
+  - Cookie management
+  - Session persistence
+  - Automatic retries
+  - Proxy support
+  - Clean API
 
 #### lxml
 - **Rationale**: Fast HTML/XML parsing with XPath support
 - **Fallback**: `html5lib` for malformed HTML
-
-#### Redis (Optional)
-- **Rationale**: Distributed coordination and work queue
-- **Use Cases**:
-  - Distributed locking
-  - Work queue management
-  - Shared state across instances
-
-### Anti-Detection Libraries
-
-#### playwright-stealth / puppeteer-extra-plugin-stealth
-- Patches automation indicators
-- Randomizes fingerprints
-- Handles common detection techniques
-
-#### fake-useragent
-- Generates realistic User-Agent strings
-- Regularly updated with latest browser versions
-
-#### python-anticaptcha / 2captcha-python
-- CAPTCHA solving service integrations
 
 ### Data Processing
 
@@ -1048,9 +773,38 @@ class Checkpoint:
 - Structured logging for better analysis
 - JSON log output for parsing
 
-#### prometheus_client (Optional)
-- Metrics export for monitoring
-- Track success rates, response times, etc.
+## Removed Components
+
+The following components were removed because they don't work against Tokopedia's anti-bot detection:
+
+### ❌ Browser Automation (Playwright, Selenium, Puppeteer)
+- **Why Removed**: ALL browser automation tools are detected and blocked
+- **Symptoms**: "Coba lagi" pages, force-closed browsers, failed interactions
+- **Replacement**: Manual browser for cookies only
+
+### ❌ Stealth Plugins (playwright-stealth, puppeteer-extra-plugin-stealth)
+- **Why Removed**: Ineffective against Tokopedia's detection
+- **Replacement**: Real browser cookies bypass detection entirely
+
+### ❌ Fingerprint Randomization
+- **Why Removed**: Not needed when using real browser cookies
+- **Replacement**: HTTP requests with manual cookies
+
+### ❌ Behavioral Simulation (Mouse movements, scrolling, typing)
+- **Why Removed**: Not applicable to HTTP requests
+- **Replacement**: Rate limiting with jitter
+
+### ❌ TLS Fingerprint Randomization (curl-impersonate, tls-client)
+- **Why Removed**: Unnecessary complexity, standard requests library works fine
+- **Replacement**: Standard Python requests library
+
+### ❌ CAPTCHA Solving Services (2Captcha, Anti-Captcha)
+- **Why Removed**: No CAPTCHAs encountered with manual cookies
+- **Replacement**: Cookie refresh when session expires
+
+### ❌ Distributed Mode (Redis, Work Queue)
+- **Why Removed**: Premature optimization, not needed for initial version
+- **Future**: Can be added later if needed
 
 ## Low-Level Design
 
