@@ -4,26 +4,17 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
 venv/
-ENV/
 env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+*.log
 
 # IDE
 .vscode/
@@ -32,29 +23,25 @@ env/
 *.swo
 *~
 
-# Logs
-logs/*.log
-*.log
-
-# Output
+# Project specific
+config/cookies.json
+config/*.json
 output/*.json
-output/*.csv
-
-# Config (keep template only)
-config/config.json
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
+output/*.xlsx
+logs/
+*.html
+*.png
+debug_*
+test_*
+before_*
+after_*
+analysis_*
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Checkpoints
-*.checkpoint
-
-# Session files
-*.session
+# Temporary
+*.tmp
+*.bak
+*.swp
